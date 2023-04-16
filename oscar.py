@@ -4,7 +4,6 @@
 # script para preparar ficheiro Excel DSD ISA 2023-2024
 #######################################################
 
-
 import openpyxl
 from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.utils import get_column_letter, column_index_from_string, coordinate_to_tuple
@@ -13,13 +12,12 @@ from openpyxl.styles import Protection
 from copy import copy
 import os
 
-
 # folder not necessary when working in a folder
 #folder=r"C:\Users\mlc\OneDrive - Universidade de Lisboa\Documents\profissional-isa-cv\cg-isa"
 #pathIn=os.path.join(folder,"DSD_2324_.xlsx")
 #pathOut=os.path.join(folder,"DSD_2324_new.xlsx")
 fnIn="DSD_2324_.xlsx"
-fnDSDv1="DSD_v1_teste.xlsx"; DSDv1=True
+fnDSDv1="DSD_v1_teste.xlsx"; DSDv1=True # para copiar a informação já inserida
 fnIn="DSD_2324_ML_12abr2023__.xlsx"
 fnOut="DSD_2324_ML_12abr2023_new.xlsx"
 fnOut="DSD_v2_teste.xlsx"
