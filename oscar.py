@@ -11,16 +11,22 @@ from openpyxl.worksheet.dimensions import ColumnDimension, DimensionHolder
 from openpyxl.styles import Protection
 from copy import copy
 import os
+from fuzzywuzzy import fuzz # compare strings
+import numpy as np
+
+#fuzz.ratio('abscerg', 'abcderfg')
 
 # folder not necessary when working in a folder
 #folder=r"C:\Users\mlc\OneDrive - Universidade de Lisboa\Documents\profissional-isa-cv\cg-isa"
 #pathIn=os.path.join(folder,"DSD_2324_.xlsx")
 #pathOut=os.path.join(folder,"DSD_2324_new.xlsx")
-fnIn="DSD_2324_.xlsx"
-fnDSDv1="DSD_v1_teste.xlsx"; DSDv1=True # para copiar a informação já inserida
-fnIn="DSD_2324_ML_12abr2023__.xlsx"
-fnOut="DSD_2324_ML_12abr2023_new.xlsx"
-fnOut="DSD_v2_teste.xlsx"
+#fnIn="DSD_2324_.xlsx"
+fnDSDv1="DSD_2324_old.xlsx" #  "DSD_v1_teste.xlsx"; 
+DSDv1=True # para copiar a informação já inserida 'preencher'+ folha 'info'
+#fnIn="DSD_2324_ML_12abr2023__.xlsx"
+fnIn="DSD_2324_ML_12abr2023_acrescentar_UC_no_final__.xlsx" # agora tem folha 'DocentesNovo'
+#fnOut="DSD_2324_ML_12abr2023_new.xlsx"
+fnOut="DSD_2324.xlsx"
 
 ############################################################ funcoes
 # devolve letra da coluna com nome (1a linha) da worksheet ws
@@ -95,7 +101,7 @@ def copy_cells(source_sheet, target_sheet,idx):
         else:
             # linhas em branco
             copy_row(r+delta,row, source_sheet, target_sheet, fill=False)
-        if r>20: break #<----------------------------------------------------------------------  remover
+        #if r>20: break #<----------------------------------------------------------------------  remover
     print('delta: ',delta)
     return rows_resp
 
@@ -190,13 +196,20 @@ def partial_copy_row(r,row, source_sheet, target_sheet, columns_to_copy,coluna_v
 
 ########################################################################################################
 # number max docentes a inserir por UC e informação a passar
+# input
+# fnDSDv1="DSD_2324_old.xlsx" # copiar 'DSD (para preencher)'
+# fnIn="DSD_2324_ML_12abr2023_acrescentar_UC_no_final__.xlsx" # Copiar 'DSD (informação UCs)' +  'DocentesNovo'
 # output
 N=15 # número máximo docentes
 VALIDATION_VALUE='Inserir docente'
 # worksheets de input
 ws_name_preencher='DSD (para preencher)'
 ws_name_info='DSD (informação UCs)'
-ws_name_docentes='docentes'
+if DSDv1: 
+    ws_name_docentes='DocentesNovo' 
+else: 
+    ws_name_docentes='docentes'
+
 # ws preencher
 columns_to_copy='Nome da UC' # 'Nome' # designação UC
 column_key='Inserir docentes na UC ' #'docentes ' # cuidado: tem um espaço a mais
@@ -212,22 +225,26 @@ column_preencher_last='Total Horas  Outras'
 column_new_horas_totais='Horas totais docente'
 column_new_horas_semanais='Horas semanais docente'
 
+info_cols_to_unprotect=['H','M','O','P','Q','R','S','T','U','V','W','X','Y','Z','AA','AB','AD','AE']
+DAA='Docente a atribuir'
+
 # ws info
 column_total_horas_info='Total Horas previsto '
 column_codigo_UC_info='Código UC'
 
-# worksheet input
+# worksheet input # wb_source is "DSD_2324_ML_12abr2023_acrescentar_UC_no_final__.xlsx" # Copiar 'DSD (informação UCs)' +  'DocentesNovo'
 wb_source = openpyxl.load_workbook(fnIn) #, data_only=True) # with data_only, it will only read values
 wsnames=wb_source.sheetnames
+print('ficheiro Madalena: ', wsnames)
 
 # test if sheet names are right
-print(wsnames)
-for name in [ws_name_preencher,ws_name_info,ws_name_docentes]:
-    if name not in wsnames:
-        stop
-    source_sheet=wb_source[name]
-    print(source_sheet.max_row)
-    print(source_sheet.max_column)
+# print(wsnames)
+# for name in [ws_name_preencher,ws_name_info,ws_name_docentes]:
+#     if name not in wsnames:
+#         stop
+#     source_sheet=wb_source[name]
+#     print(source_sheet.max_row)
+#     print(source_sheet.max_column)
 
 # conteudo worksheet docentes
 ws=wb_source[ws_name_docentes]
@@ -237,7 +254,7 @@ print([c.value for c in next(ws.iter_rows(min_row=1, max_row=1))])
 # target work book and sheet
 wb_target = openpyxl.Workbook()
 
-################################################################################# main worksheet 'DSD (para preencher)'
+################################################################################# criar main worksheet 'DSD (para preencher)'
 target_sheet = wb_target.create_sheet(ws_name_preencher)
 source_sheet=wb_source[ws_name_preencher]
 
@@ -262,16 +279,27 @@ rows_resp=copy_sheet(source_sheet, target_sheet,idx)
 
 # create drop-down validation list
 # lista de docentes para validação (drop-down menu)
+# lista de 'Posições': coluna B
 val_sheet=wb_source[ws_name_docentes]
 mylist = [c.value for c in val_sheet['A']]
+mylistB = [c.value for c in val_sheet['B']]
 # to remove None values in list
 mylist = [i for i in mylist if i is not None]
+mylistB = [i for i in mylistB if i is not None]
 nomes_docentes=list(map(lambda x:x.strip(),mylist)) # eliminar \n
+posicoes_docentes=list(map(lambda x:x.strip(),mylistB)) # eliminar \n
+if len(mylist)!=len(mylistB): stop
+
+nomes_docentes.append(DAA)
+posicoes_docentes.append(' ')
+
+max([len(x) for x in posicoes_docentes])
 
 #docentes a remover
-nomes_docentes.remove('Adelino Mendes da Silva Paiva')
-nomes_docentes.remove('João António Ribeiro Ferreira Nunes')
+#nomes_docentes.remove('Adelino Mendes da Silva Paiva')
+#nomes_docentes.remove('João António Ribeiro Ferreira Nunes')
 len(nomes_docentes)
+
 
 # escrever docentes em coluna coldoc e outras 2 colunas adicionais
 for i in range(len(nomes_docentes)):
@@ -317,6 +345,20 @@ for i in range(len(nomes_docentes)):
         target_cell.value=nomes_docentes[i]
         target_cell.border = copy(red_cell.border)
         target_cell.fill = copy(red_cell.fill)
+    # posições (categorias)
+    target_cell=target_sheet.cell(i+1,column_index_from_string(coldoc)+1)
+    if i==0: 
+        target_cell.value=posicoes_docentes[i]
+        target_cell.font = copy(red_cell.font)
+        target_cell.border = copy(red_cell.border)
+        target_cell.fill = copy(red_cell.fill)
+        target_cell.number_format = copy(red_cell.number_format)
+        #target_cell.protection = copy(red_cell.protection)
+        target_cell.alignment = copy(red_cell.alignment)
+    else: 
+        target_cell.value=posicoes_docentes[i]
+        target_cell.border = copy(red_cell.border)
+        target_cell.fill = copy(red_cell.fill)
     #if i <5 : print(target_sheet['AZ{}'.format(i+2)].value)
 #str1 = ','.join(nomes_docentes)                                    
 #str1 = '"'+str1+'"'
@@ -342,6 +384,24 @@ if DSDv1:
             print(ws1.max_row)
             print(ws1.max_column)
 
+low_matches=[]
+# subsituir os nomes já preenchidos pelo novo nome da lista da RH (nomes_docentes)
+def most_similar_name(nome):
+    if nome=='Docente a atribuir':
+        return 'Docente a atribuir'
+    if nome=='Inserir docente': 
+        return 'Inserir docente'
+    else:
+        L=[fuzz.ratio(nome,x) for x in nomes_docentes]
+        if np.max(L) < 80: 
+            low_matches.append((nome,np.max(L)))
+            return(DAA)
+        else: 
+            return nomes_docentes[np.argmax(L)]
+
+#fuzz.ratio('Jorge Gominho',"Jorge Manuel Barros D'Almeida Gominho")
+#nome='Ana Cristina Delaunay Caperta'
+#most_similar_name('Jorge Gominho')
 
 # depois de fazer a cópia de source_sheet para target_sheet:
 # indicar as células em que ficam os drop-down menus e desproteger as células a preencher
@@ -358,9 +418,11 @@ if True:
         if ct.value==VALIDATION_VALUE: # originalmente é sempre assim,não depende de DSDv1
             data_val.add(ct)
             if DSDv1:
-                c1=ws1.cell(k+1,idxval+1) # mesma célula
+                c1=ws1.cell(k+1,idxval+1) # mesma célula de ws1 e target_sheet<---------------------------------------
                 if not c1.protection.locked and c1.value is not None and c1.value != '':
-                     ct.value=c1.value
+                     newname=most_similar_name(c1.value)
+                     ct.value=newname
+                     #ct.value=c1.value
             #     else: 
             #         data_val.add(ct)
             # else:
@@ -375,26 +437,34 @@ if True:
                         dt.value=d1.value
                 dt.protection = Protection(locked=False)
 
-ct=target_sheet['E3']
-data_val.add(ct)
-ct.value
-c1=ws1['E3']
-c1.value
-ct.value=c1.value
-ct.value
+# """ ct=target_sheet['E3']
+# data_val.add(ct)
+# ct.value
+# c1=ws1['E3']
+# c1.value
+# ct.value=c1.value
+# ct.value """
 #print(d1.value)
 wb1.close
 
 # ajustar tamanho das colunas
-target_sheet.column_dimensions[coldoc].width = len('Maria Cristina da Fonseca Ataide Castel-Branco Alarcão Júdice')
+target_sheet.column_dimensions[coldoc].width = max([len(x) for x in nomes_docentes])
+target_sheet.column_dimensions[get_column_letter(column_index_from_string(coldoc)+1)].width = max([len(x) for x in posicoes_docentes])
+
 #dim_holder = DimensionHolder(worksheet=target_sheet)
 #dim_holder[coldoc] = ColumnDimension(target_sheet, min=col, max=col, width=30)
 #target_sheet.column_dimensions = dim_holder
 
 
 ####################################################################### copiar worksheet 'DSD (informação UCs)'
+if DSDv1: 
+    source_sheet=wb1[ws_name_info]  # lê no ficheiro DSD já prépreenchido
+else:
+    source_sheet=wb_source[ws_name_info] # lê no ficheiro DA
+
+# new sheet to create
 info_sheet = wb_target.create_sheet(ws_name_info)
-source_sheet=wb_source[ws_name_info]
+
 copy_sheet_attributes(source_sheet, info_sheet)
 for r, row in enumerate(source_sheet.iter_rows()):
     for c, cell in enumerate(row):
@@ -408,6 +478,8 @@ for r, row in enumerate(source_sheet.iter_rows()):
         target_cell.border = copy(source_cell.border)
         target_cell.fill = copy(source_cell.fill)
         target_cell.number_format = copy(source_cell.number_format)
+        if get_column_letter(c+1) in info_cols_to_unprotect:
+            target_cell.protection = Protection(locked=False)
         #target_cell.protection = copy(source_cell.protection)
         target_cell.alignment = copy(source_cell.alignment)
         if not isinstance(source_cell, openpyxl.cell.ReadOnlyCell) and source_cell.hyperlink:
@@ -446,8 +518,11 @@ for r in rows_resp:
         e.value="=SUM({}{}:{}{})".format(nomeColuna2letter(target_sheet, column_preencher_first),k,nomeColuna2letter(target_sheet, column_preencher_last),k)
     # horas em falta: total de horas que vem de info menos soma das horas dos docentes
     c=target_sheet.cell(r+1,column_index_from_string(nomeColuna2letter(target_sheet, column_horas_em_falta_preencher)))
-    c.value="=VLOOKUP(int({}{}),'{}'!AY:AZ, 2, FALSE)-SUM({}{}:{}{})".format(nomeColuna2letter(target_sheet, column_codigo_UC_preencher),r+1,ws_name_info,nomeColuna2letter(target_sheet, column_preencher_first),r+2,nomeColuna2letter(target_sheet, column_preencher_last),r+1+N)
-
+    # código 1564 -- Sistemas de Produção Animal nos Trópicos
+    if r+1<4948: # com as UC originais
+        c.value="=VLOOKUP(int({}{}),'{}'!AY:AZ, 2, FALSE)-SUM({}{}:{}{})".format(nomeColuna2letter(target_sheet, column_codigo_UC_preencher),r+1,ws_name_info,nomeColuna2letter(target_sheet, column_preencher_first),r+2,nomeColuna2letter(target_sheet, column_preencher_last),r+1+N)
+    else: # UC adicionada no fim do ficheiro fnIn
+        c.value="=VLOOKUP(1564,'{}'!AY:AZ, 2, FALSE)-SUM({}{}:{}{})".format(ws_name_info,nomeColuna2letter(target_sheet, column_preencher_first),r+2,nomeColuna2letter(target_sheet, column_preencher_last),r+1+N)
 
 #copyColumn(target_sheet,column_somatorio_preencher,'AZ')
 for i in range(len(nomes_docentes)): #target_sheet.max_row):
@@ -486,5 +561,6 @@ wb_target.close
 # what is this?
 # isinstance(c, openpyxl.cell.read_only.EmptyCell)
 
+print(low_matches)
 
 
