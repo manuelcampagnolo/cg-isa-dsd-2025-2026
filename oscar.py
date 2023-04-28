@@ -21,12 +21,13 @@ import numpy as np
 #pathIn=os.path.join(folder,"DSD_2324_.xlsx")
 #pathOut=os.path.join(folder,"DSD_2324_new.xlsx")
 #fnIn="DSD_2324_.xlsx"
-fnDSDv1="DSD_2324_old.xlsx" #  "DSD_v1_teste.xlsx"; 
+fnDSDv1="DSD_2324_28abril.xlsx" #  "DSD_v1_teste.xlsx"; 
 DSDv1=True # para copiar a informação já inserida 'preencher'+ folha 'info'
 #fnIn="DSD_2324_ML_12abr2023__.xlsx"
 fnIn="DSD_2324_ML_12abr2023_acrescentar_UC_no_final__.xlsx" # agora tem folha 'DocentesNovo'
 #fnOut="DSD_2324_ML_12abr2023_new.xlsx"
 fnOut="DSD_2324.xlsx"
+fnResumo="resumo_DSD_2324.xlsx"
 
 ############################################################ funcoes
 # devolve letra da coluna com nome (1a linha) da worksheet ws
@@ -101,7 +102,7 @@ def copy_cells(source_sheet, target_sheet,idx):
         else:
             # linhas em branco
             copy_row(r+delta,row, source_sheet, target_sheet, fill=False)
-        #if r>20: break #<----------------------------------------------------------------------  remover
+        if r>40: break #<----------------------------------------------------------------------  remover
     print('delta: ',delta)
     return rows_resp
 
@@ -232,10 +233,32 @@ DAA='Docente a atribuir'
 column_total_horas_info='Total Horas previsto '
 column_codigo_UC_info='Código UC'
 
+# match strings
+MIN_MATCH=80
+
+#################################################################################################
+# workbooks
+########################################################### criar workbook (target)
+# target work book and sheet
+wb_target = openpyxl.Workbook()
+target_sheet = wb_target.create_sheet(ws_name_preencher)
+########################################################### current DSD
+if DSDv1: 
+    wb1 = openpyxl.load_workbook(fnDSDv1) #, data_only=True) # with data_only, it will only read values
 # worksheet input # wb_source is "DSD_2324_ML_12abr2023_acrescentar_UC_no_final__.xlsx" # Copiar 'DSD (informação UCs)' +  'DocentesNovo'
 wb_source = openpyxl.load_workbook(fnIn) #, data_only=True) # with data_only, it will only read values
 wsnames=wb_source.sheetnames
 print('ficheiro Madalena: ', wsnames)
+# conteudo worksheet docentes
+ws=wb_source[ws_name_preencher]
+print([c.value for c in next(ws.iter_rows(min_row=1, max_row=1))])
+ws=wb_source[ws_name_docentes]
+print([c.value for c in next(ws.iter_rows(min_row=1, max_row=1))])
+########################################################### workbook resumo_DSD_2324
+wbr=openpyxl.Workbook()
+wsr_ucs=wbr.create_sheet('UCs')
+wsr_docentes=wbr.create_sheet('docentes')
+###########################################################
 
 # test if sheet names are right
 # print(wsnames)
@@ -246,16 +269,9 @@ print('ficheiro Madalena: ', wsnames)
 #     print(source_sheet.max_row)
 #     print(source_sheet.max_column)
 
-# conteudo worksheet docentes
-ws=wb_source[ws_name_docentes]
-print([c.value for c in next(ws.iter_rows(min_row=1, max_row=1))])
 
-########################################################### criar workbook (target)
-# target work book and sheet
-wb_target = openpyxl.Workbook()
 
 ################################################################################# criar main worksheet 'DSD (para preencher)'
-target_sheet = wb_target.create_sheet(ws_name_preencher)
 source_sheet=wb_source[ws_name_preencher]
 
 # coluna column_key -> idx
@@ -373,7 +389,7 @@ target_sheet.add_data_validation(data_val)
 
 # abrid DSD_v1
 if DSDv1: 
-    wb1 = openpyxl.load_workbook(fnDSDv1) #, data_only=True) # with data_only, it will only read values
+    #wb1 = openpyxl.load_workbook(fnDSDv1) #, data_only=True) # with data_only, it will only read values
     names1=wb1.sheetnames
     # test if sheet names are right
     print(names1)
@@ -387,13 +403,13 @@ if DSDv1:
 low_matches=[]
 # subsituir os nomes já preenchidos pelo novo nome da lista da RH (nomes_docentes)
 def most_similar_name(nome):
-    if nome=='Docente a atribuir':
-        return 'Docente a atribuir'
-    if nome=='Inserir docente': 
-        return 'Inserir docente'
+    if nome==DAA:
+        return DAA
+    if nome==VALIDATION_VALUE: 
+        return VALIDATION_VALUE
     else:
         L=[fuzz.ratio(nome,x) for x in nomes_docentes]
-        if np.max(L) < 80: 
+        if np.max(L) < MIN_MATCH: 
             low_matches.append((nome,np.max(L)))
             return(DAA)
         else: 
@@ -413,20 +429,32 @@ if True:
     if DSDv1:
         ws1=wb1[ws_name_preencher]
     idxval=headers.index(coluna_validacao) # where drop-manu will be
+    idx_not_empty=0
     for k in range(target_sheet.max_row):
         ct=target_sheet.cell(k+1,idxval+1)
-        if ct.value==VALIDATION_VALUE: # originalmente é sempre assim,não depende de DSDv1
+        if ct.value!=VALIDATION_VALUE: # originalmente é sempre == VALIDATION_VALUE ,não depende de DSDv1
+            # for resumo_DSD2324 
+            for colpreencher in colunas_horas_a_preencher+['Nome da UC', 'ciclo de estudos', 'ano curricular', 'semestre']+['Grandes Áreas Científicas (FOS)', 'Áreas Científicas (FOS)', 'Áreas Disicplinares', 'Departamento']:
+                idx=headers.index(colpreencher)
+                dt=target_sheet.cell(k+1,idx+1)
+                cr=wsr_ucs.cell(idx_not_empty+1,idx+1)
+                cr.value=dt.value
+            idx_not_empty +=1
+        else:
             data_val.add(ct)
             if DSDv1:
                 c1=ws1.cell(k+1,idxval+1) # mesma célula de ws1 e target_sheet<---------------------------------------
                 if not c1.protection.locked and c1.value is not None and c1.value != '':
-                     newname=most_similar_name(c1.value)
+                     if False: 
+                         newname=most_similar_name(c1.value)
+                     else: 
+                         newname=c1.value
                      ct.value=newname
-                     #ct.value=c1.value
-            #     else: 
-            #         data_val.add(ct)
-            # else:
-            #     data_val.add(ct)
+                     # for resumo_DSD2324 
+                     if c1.value!=VALIDATION_VALUE and c1.value!=DAA:
+                        cr=wsr_ucs.cell(idx_not_empty+1,idxval+1)
+                        cr.value=newname
+                        idx_not_empty +=1
             ct.protection = Protection(locked=False)
             for colpreencher in colunas_horas_a_preencher:
                 idx=headers.index(colpreencher)
@@ -435,6 +463,10 @@ if True:
                     d1=ws1.cell(k+1,idx+1) # mesma célula
                     if not d1.protection.locked and d1.value is not None and d1.value != '':
                         dt.value=d1.value
+                        # for resumo_DSD2324 
+                        if c1.value!=VALIDATION_VALUE and c1.value!=DAA:
+                            cr=wsr_ucs.cell(idx_not_empty+1,idx+1)
+                            cr.value=d1.value
                 dt.protection = Protection(locked=False)
 
 # """ ct=target_sheet['E3']
@@ -545,6 +577,9 @@ for i in range(len(nomes_docentes)): #target_sheet.max_row):
 # eliminar a worksheet original
 if 'Sheet' in wb_target.sheetnames:  # remove default sheet
     wb_target.remove(wb_target['Sheet'])
+if 'Sheet' in wbr.sheetnames:  # remove default sheet
+    wbr.remove(wbr['Sheet'])
+
 
 # proteger
 target_sheet.protection.sheet = True
@@ -554,9 +589,10 @@ info_sheet.protection.password = 'kathleen'
 
 # gravar para ficheiro
 wb_target.save(fnOut)
+wbr.save(fnResumo)
 
 wb_target.close
-
+wbr.close
 
 # what is this?
 # isinstance(c, openpyxl.cell.read_only.EmptyCell)
