@@ -9,19 +9,10 @@ from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.utils import get_column_letter, column_index_from_string, coordinate_to_tuple
 from openpyxl.worksheet.dimensions import ColumnDimension, DimensionHolder
 from openpyxl.styles import Protection
-from openpyxl.utils.dataframe import dataframe_to_rows
-from openpyxl.styles import PatternFill, Border, Side, Alignment, Protection, Font, colors
-from openpyxl.styles import Border, Side
-
 from copy import copy
 import os
 from fuzzywuzzy import fuzz # compare strings
 import numpy as np
-
-import pandas as pd
-from datetime import datetime
-import warnings
-warnings.filterwarnings("ignore", category=UserWarning)
 
 #fuzz.ratio('abscerg', 'abcderfg')
 
@@ -37,66 +28,6 @@ fnIn="DSD_2324_ML_12abr2023_acrescentar_UC_no_final__.xlsx" # agora tem folha 'D
 #fnOut="DSD_2324_ML_12abr2023_new.xlsx"
 fnOut="DSD_2324.xlsx"
 fnResumo="resumo_DSD_2324.xlsx"
-
-RESUMO=True
-
-########################################################################### functions (não usado)
-
-def df_to_excel(df, ws, header=True, index=True, startrow=0, startcol=0):
-    """Write DataFrame df to openpyxl worksheet ws"""
-    rows = dataframe_to_rows(df, header=header, index=index)
-    for r_idx, row in enumerate(rows, startrow + 1):
-        for c_idx, value in enumerate(row, startcol + 1):
-             ws.cell(row=r_idx, column=c_idx).value = value
-
-def create_workbook_from_dataframe(df):
-    """
-    1. Create workbook from specified pandas.DataFrame
-    2. Adjust columns width to fit the text inside
-    3. Make the index column and the header row bold
-    4. Fill background color for the header row
-
-    Other beautification MUST be done by usage side.
-    """
-    workbook = openpyxl.Workbook()
-    ws = workbook.active
-
-    rows = dataframe_to_rows(df.reset_index(), index=False)
-    col_widths = [0] * (len(df.columns) + 1)
-    for i, row in enumerate(rows, 1):
-        for j, val in enumerate(row, 1):
-
-            if type(val) is str:
-                cell = ws.cell(row=i, column=j, value=val)
-                col_widths[j - 1] = max([col_widths[j - 1], len(str(val))])
-            elif hasattr(val, "sort"):
-                cell = ws.cell(row=i, column=j, value=", ".join(list(map(lambda v: str(v), list(val)))))
-                col_widths[j - 1] = max([col_widths[j - 1], len(str(val))])
-            else:
-                cell = ws.cell(row=i, column=j, value=val)
-                col_widths[j - 1] = max([col_widths[j - 1], len(str(val)) + 1])
-
-            # Make the index column and the header row bold
-            if i == 1 or j == 1:
-                cell.font = Font(bold=True)
-
-    # Adjust column width
-    for i, w in enumerate(col_widths):
-        letter = get_column_letter(i + 1)
-        ws.column_dimensions[letter].width = w
-
-    return workbook
-
-def set_border(ws):
-    border = Border(left=Side(border_style='thin', color='000000'),
-                right=Side(border_style='thin', color='000000'),
-                top=Side(border_style='thin', color='000000'),
-                bottom=Side(border_style='thin', color='000000'))
-
-    rows = ws.iter_rows()
-    for row in rows:
-        for cell in row:
-            cell.border = border
 
 ############################################################ funcoes
 # devolve letra da coluna com nome (1a linha) da worksheet ws
@@ -171,7 +102,7 @@ def copy_cells(source_sheet, target_sheet,idx):
         else:
             # linhas em branco
             copy_row(r+delta,row, source_sheet, target_sheet, fill=False)
-        #if r>40: break #<----------------------------------------------------------------------  remover
+        if r>40: break #<----------------------------------------------------------------------  remover
     print('delta: ',delta)
     return rows_resp
 
@@ -305,22 +236,6 @@ column_codigo_UC_info='Código UC'
 # match strings
 MIN_MATCH=80
 
-# para resumo
-column_horas_em_falta_preencher='Horas em falta na UC' #Horas em falta na UC
-column_somatorio_preencher= 'Somatório'
-colunas_nome_UC=['Nome da UC', column_codigo_UC_info, 'ciclo de estudos', 'ano curricular', 'semestre']
-colunas_FOS=['Grandes Áreas Científicas (FOS)', 'Áreas Científicas (FOS)', 'Áreas Disicplinares', 'Departamento']
-colResponsavel='Responsável'
-colNomeDocente='NomeDocente'
-colLinhaResp='linhaResp'
-
-
-# colunas a apagar em DSD info
-col_apagar_info_1='Total Horas Somadas '
-col_apagar_info_2='Horas em falta na UC'
-
-
-
 #################################################################################################
 # workbooks
 ########################################################### criar workbook (target)
@@ -329,15 +244,9 @@ wb_target = openpyxl.Workbook()
 target_sheet = wb_target.create_sheet(ws_name_preencher)
 ########################################################### current DSD
 if DSDv1: 
-    if RESUMO:
-        wb1 = openpyxl.load_workbook(fnDSDv1,data_only=True) # with data_only, it will only read values
-    else:
-        wb1 = openpyxl.load_workbook(fnDSDv1) #,data_only=True) # with data_only, it will only read values
+    wb1 = openpyxl.load_workbook(fnDSDv1) #, data_only=True) # with data_only, it will only read values
 # worksheet input # wb_source is "DSD_2324_ML_12abr2023_acrescentar_UC_no_final__.xlsx" # Copiar 'DSD (informação UCs)' +  'DocentesNovo'
-if RESUMO:
-    wb_source = openpyxl.load_workbook(fnIn, data_only=True) # with data_only, it will only read values
-else:
-    wb_source = openpyxl.load_workbook(fnIn) #, data_only=True) # with data_only, it will only read values
+wb_source = openpyxl.load_workbook(fnIn) #, data_only=True) # with data_only, it will only read values
 wsnames=wb_source.sheetnames
 print('ficheiro Madalena: ', wsnames)
 # conteudo worksheet docentes
@@ -349,7 +258,6 @@ print([c.value for c in next(ws.iter_rows(min_row=1, max_row=1))])
 wbr=openpyxl.Workbook()
 wsr_ucs=wbr.create_sheet('UCs')
 wsr_docentes=wbr.create_sheet('docentes')
-
 ###########################################################
 
 # test if sheet names are right
@@ -479,13 +387,19 @@ data_val = DataValidation(type='list',formula1='={}{}:{}{}'.format(coldoc,'$2',c
 # criar validação em target_sheet
 target_sheet.add_data_validation(data_val)
 
-# ler DSD existente
+# abrid DSD_v1
 if DSDv1: 
     #wb1 = openpyxl.load_workbook(fnDSDv1) #, data_only=True) # with data_only, it will only read values
     names1=wb1.sheetnames
     # test if sheet names are right
     print(names1)
-        
+    for name in [ws_name_preencher,ws_name_info]:
+        if name not in names1:
+            stop
+            ws1=wb1[name]
+            print(ws1.max_row)
+            print(ws1.max_column)
+
 low_matches=[]
 # subsituir os nomes já preenchidos pelo novo nome da lista da RH (nomes_docentes)
 def most_similar_name(nome):
@@ -508,79 +422,52 @@ def most_similar_name(nome):
 # depois de fazer a cópia de source_sheet para target_sheet:
 # indicar as células em que ficam os drop-down menus e desproteger as células a preencher
 # if DSDv1: copiar valores das células de DSDv_1 para DSD_v2 (target sheet):
-# df para resumo
-
-df=pd.DataFrame(columns=colunas_FOS+colunas_nome_UC+['linhaResp',colResponsavel,colNomeDocente]+colunas_horas_a_preencher+[column_somatorio_preencher,column_horas_em_falta_preencher])
-
-# headers = [c.value for c in next(source_sheet.iter_rows(min_row=1, max_row=1))]
-# colocar drop-down menu para colunas em coluna_validacao (que têm valor VALIDATION_VALUE='VAL')
-# desproteger células de coluna_validacao e de colunas_horas_a_preencher
-if DSDv1:
-    ws1=wb1[ws_name_preencher]
+if True:
+    # headers = [c.value for c in next(source_sheet.iter_rows(min_row=1, max_row=1))]
+    # colocar drop-down menu para colunas em coluna_validacao (que têm valor VALIDATION_VALUE='VAL')
+    # desproteger células de coluna_validacao e de colunas_horas_a_preencher
+    if DSDv1:
+        ws1=wb1[ws_name_preencher]
     idxval=headers.index(coluna_validacao) # where drop-manu will be
-    idx_not_empty=-1
+    idx_not_empty=0
     for k in range(target_sheet.max_row):
         ct=target_sheet.cell(k+1,idxval+1)
-        if ct.value!=VALIDATION_VALUE: # para as linhas que não têm drop-down menu em DSD
+        if ct.value!=VALIDATION_VALUE: # originalmente é sempre == VALIDATION_VALUE ,não depende de DSDv1
             # for resumo_DSD2324 
+            for colpreencher in colunas_horas_a_preencher+['Nome da UC', 'ciclo de estudos', 'ano curricular', 'semestre']+['Grandes Áreas Científicas (FOS)', 'Áreas Científicas (FOS)', 'Áreas Disicplinares', 'Departamento']:
+                idx=headers.index(colpreencher)
+                dt=target_sheet.cell(k+1,idx+1)
+                cr=wsr_ucs.cell(idx_not_empty+1,idx+1)
+                cr.value=dt.value
             idx_not_empty +=1
-            for colpreencher in colunas_FOS+colunas_nome_UC+[column_horas_em_falta_preencher]:
-                idx=headers.index(colpreencher)
-                dt=target_sheet.cell(k+1,idx+1)
-                #if ct.value is not None: 
-                #cr=wsr_ucs.cell(idx_not_empty+1,idx+1)
-                #cr.value=dt.value
-                df.loc[idx_not_empty,colpreencher]=dt.value
-                # responsável
-                df.loc[idx_not_empty,colResponsavel]=ct.value
-                df.loc[idx_not_empty,colLinhaResp]=True
-                # para completar abaixo
-                df_aux=df.iloc[idx_not_empty]
-        else:  # linhas que têm drop-down menu
+        else:
             data_val.add(ct)
-            # só coluna dos drop-down menus
-            c1=ws1.cell(k+1,idxval+1) # mesma célula de ws1 e target_sheet<---------------------------------------
-            if not c1.protection.locked and c1.value is not None and c1.value != '':
-                # if False: 
-                #     newname=most_similar_name(c1.value) # only if list of names is changed
-                # else: 
-                #     newname=c1.value
-                ct.value=c1.value
-                # for resumo_DSD2324 só escreve quando o nome do docente já tiver sido selecionado
-                idx_not_empty +=1
-                # para preencher df resumo, igual a df_aux definida acima
-                for colpreencher in colunas_FOS+colunas_nome_UC+[column_horas_em_falta_preencher]:
-                    df.loc[idx_not_empty,colpreencher]=df_aux.loc[colpreencher]
-                df.loc[idx_not_empty,colResponsavel]=df_aux.loc[colResponsavel]
-                #cr=wsr_ucs.cell(idx_not_empty+1,idxval+1)
-                #cr.value=c1.value
-                df.loc[idx_not_empty,colNomeDocente]=c1.value
-                #df.loc[idx_not_empty,colResponsavel]=nomeResponsavel
-                df.loc[idx_not_empty,colLinhaResp]=False  
+            if DSDv1:
+                c1=ws1.cell(k+1,idxval+1) # mesma célula de ws1 e target_sheet<---------------------------------------
+                if not c1.protection.locked and c1.value is not None and c1.value != '':
+                     if False: 
+                         newname=most_similar_name(c1.value)
+                     else: 
+                         newname=c1.value
+                     ct.value=newname
+                     # for resumo_DSD2324 
+                     if c1.value!=VALIDATION_VALUE and c1.value!=DAA:
+                        cr=wsr_ucs.cell(idx_not_empty+1,idxval+1)
+                        cr.value=newname
+                        idx_not_empty +=1
             ct.protection = Protection(locked=False)
-            # encher outras colunas em target cell
-            for colpreencher in colunas_horas_a_preencher+[column_somatorio_preencher,column_horas_em_falta_preencher]:
+            for colpreencher in colunas_horas_a_preencher:
                 idx=headers.index(colpreencher)
                 dt=target_sheet.cell(k+1,idx+1)
-                d1=ws1.cell(k+1,idx+1) # mesma célula
-                # for resumo_DSD2324
-                df.loc[idx_not_empty,colpreencher]=d1.value # including [column_somatorio_preencher,column_horas_em_falta_preencher]
-                if not d1.protection.locked and d1.value is not None and d1.value != '':
-                    dt.value=d1.value
-                    # for resumo_DSD2324
-                    # if d1.value!=VALIDATION_VALUE: # and d1.value!=DAA:
-                        #cr=wsr_ucs.cell(idx_not_empty+1,idx+1)
-                        #cr.value=d1.value
+                if DSDv1:
+                    d1=ws1.cell(k+1,idx+1) # mesma célula
+                    if not d1.protection.locked and d1.value is not None and d1.value != '':
+                        dt.value=d1.value
+                        # for resumo_DSD2324 
+                        if c1.value!=VALIDATION_VALUE and c1.value!=DAA:
+                            cr=wsr_ucs.cell(idx_not_empty+1,idx+1)
+                            cr.value=d1.value
                 dt.protection = Protection(locked=False)
-
-
-# copy data frame to Excel, do the wsr_docentes worksheet
-df=df.iloc[1:] #2?!
-df=df.dropna(subset=[colResponsavel])
-dfref = df[df[colNomeDocente] != VALIDATION_VALUE]
-
-df_to_excel(dfref[dfref[colLinhaResp]], wsr_ucs, header=True)
-df_to_excel(dfref[dfref[colLinhaResp]==False], wsr_docentes, header=True)
 
 # """ ct=target_sheet['E3']
 # data_val.add(ct)
@@ -607,68 +494,35 @@ if DSDv1:
 else:
     source_sheet=wb_source[ws_name_info] # lê no ficheiro DA
 
-# copiar DSD info para target
+# new sheet to create
 info_sheet = wb_target.create_sheet(ws_name_info)
-#headers = [c.value for c in next(source_sheet.iter_rows(min_row=1, max_row=1))]
-
-cols_a_apagar=[nomeColuna2letter(source_sheet,col_apagar_info_1),nomeColuna2letter(source_sheet,col_apagar_info_2)]
 
 copy_sheet_attributes(source_sheet, info_sheet)
 for r, row in enumerate(source_sheet.iter_rows()):
     for c, cell in enumerate(row):
-        if get_column_letter(c+1) not in cols_a_apagar:
-            if c==1: print(r)
-            source_cell = cell
-            if isinstance(source_cell, openpyxl.cell.read_only.EmptyCell):
-                continue
-            target_cell = info_sheet.cell(column=c+1, row=r+1) # indices am cell começam em 1 ...!!!
-            target_cell._value = source_cell._value
-            target_cell.data_type = source_cell.data_type
-            target_cell.font = copy(source_cell.font)
-            target_cell.border = copy(source_cell.border)
-            target_cell.fill = copy(source_cell.fill)
-            target_cell.number_format = copy(source_cell.number_format)
-            if get_column_letter(c+1) in info_cols_to_unprotect:
-                target_cell.protection = Protection(locked=False)
-            #target_cell.protection = copy(source_cell.protection)
-            target_cell.alignment = copy(source_cell.alignment)
-            if not isinstance(source_cell, openpyxl.cell.ReadOnlyCell) and source_cell.hyperlink:
-                target_cell._hyperlink = copy(source_cell.hyperlink)
-            if not isinstance(source_cell, openpyxl.cell.ReadOnlyCell) and source_cell.comment:
-                target_cell.comment = copy(source_cell.comment)
-
-copyColumn(info_sheet,column_codigo_UC_info,'AY','numeric')
-copyColumn(info_sheet,column_total_horas_info,'AZ','numeric')
-
-# copiar DSD info para resumo
-wsr_info = wbr.create_sheet(ws_name_info)
-copy_sheet_attributes(source_sheet, wsr_info)
-for r, row in enumerate(source_sheet.iter_rows()):
-    for c, cell in enumerate(row):
-        if get_column_letter(c+1) not in cols_a_apagar:
-            if c==1: print(r)
-            source_cell = cell
-            if isinstance(source_cell, openpyxl.cell.read_only.EmptyCell):
-                continue
-            target_cell = wsr_info.cell(column=c+1, row=r+1) # indices am cell começam em 1 ...!!!
-            target_cell._value = source_cell._value
-            target_cell.data_type = source_cell.data_type
-            target_cell.font = copy(source_cell.font)
-            target_cell.border = copy(source_cell.border)
-            target_cell.fill = copy(source_cell.fill)
-            target_cell.number_format = copy(source_cell.number_format)
-            if get_column_letter(c+1) in info_cols_to_unprotect:
-                target_cell.protection = Protection(locked=False)
-            #target_cell.protection = copy(source_cell.protection)
-            target_cell.alignment = copy(source_cell.alignment)
-            if not isinstance(source_cell, openpyxl.cell.ReadOnlyCell) and source_cell.hyperlink:
-                target_cell._hyperlink = copy(source_cell.hyperlink)
-            if not isinstance(source_cell, openpyxl.cell.ReadOnlyCell) and source_cell.comment:
-                target_cell.comment = copy(source_cell.comment)
-
+        source_cell = cell
+        if isinstance(source_cell, openpyxl.cell.read_only.EmptyCell):
+            continue
+        target_cell = info_sheet.cell(column=c+1, row=r+1) # indices am cell começam em 1 ...!!!
+        target_cell._value = source_cell._value
+        target_cell.data_type = source_cell.data_type
+        target_cell.font = copy(source_cell.font)
+        target_cell.border = copy(source_cell.border)
+        target_cell.fill = copy(source_cell.fill)
+        target_cell.number_format = copy(source_cell.number_format)
+        if get_column_letter(c+1) in info_cols_to_unprotect:
+            target_cell.protection = Protection(locked=False)
+        #target_cell.protection = copy(source_cell.protection)
+        target_cell.alignment = copy(source_cell.alignment)
+        if not isinstance(source_cell, openpyxl.cell.ReadOnlyCell) and source_cell.hyperlink:
+            target_cell._hyperlink = copy(source_cell.hyperlink)
+        if not isinstance(source_cell, openpyxl.cell.ReadOnlyCell) and source_cell.comment:
+            target_cell.comment = copy(source_cell.comment)
 
 #headers = [c.value for c in next(info_sheet.iter_rows(min_row=1, max_row=1))]
 
+copyColumn(info_sheet,column_codigo_UC_info,'AY','numeric')
+copyColumn(info_sheet,column_total_horas_info,'AZ','numeric')
 # column_total_horas
 
 # ##################################################################### criar fórmulas em ws_name_preencher
