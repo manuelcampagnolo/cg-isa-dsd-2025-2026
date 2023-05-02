@@ -298,7 +298,7 @@ column_new_horas_semanais='Horas semanais docente'
 info_cols_to_unprotect=['H','M','O','P','Q','R','S','T','U','V','W','X','Y','Z','AA','AB','AD','AE']
 DAA='Docente a atribuir'
 
-# ws info
+# ws info (colocada para facilitar VLOOKUP)
 column_total_horas_info='Total Horas previsto '
 column_codigo_UC_info='Código UC'
 
@@ -314,12 +314,9 @@ colResponsavel='Responsável'
 colNomeDocente='NomeDocente'
 colLinhaResp='linhaResp'
 
-
-# colunas a apagar em DSD info
+# colunas a apagar em DSD info: funciona
 col_apagar_info_1='Total Horas Somadas '
 col_apagar_info_2='Horas em falta na UC'
-
-
 
 #################################################################################################
 # workbooks
