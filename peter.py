@@ -24,6 +24,8 @@ import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
 
 ########################################################################################################
+SAVE_HTML_MAT=True
+
 fnDSD="DSD_2324_2maio2023.xlsx" #  "DSD_v1_teste.xlsx"; 
 fnResumo="resumo_DSD_2324_2maio.xlsx"
 VALIDATION_VALUE='Inserir docente'
@@ -234,5 +236,30 @@ if 'Sheet' in wbr.sheetnames:  # remove default sheet
 
 wbr.save(fnResumo)
 wbr.close
+
+if SAVE_HTML_MAT:
+    output_columns=['Código UC','Nome da UC', 'Áreas Disicplinares', 'Áreas Científicas (FOS)',  'ciclo de estudos','nomeResponsavel']
+    # determinar UCs em que o responsável é da SM
+    dfucs.columns
+    dfucs.loc[dfucs['Áreas Disicplinares']=='MAT',['Nome da UC','nomeResponsavel']]
+    docs_mat=list(dfucs.loc[dfucs['Áreas Disicplinares']=='MAT','nomeResponsavel'].unique())
+    ucs_mat=list(dfucs.loc[dfucs['nomeResponsavel'].isin(docs_mat),'Nome da UC'].unique())
+    # UCs coordenadas por docentes MAT
+    df=dfucs.loc[dfucs['nomeResponsavel'].isin(docs_mat) ,output_columns]
+    # determinar UCs em que o docente é da SM
+    dfdsd.columns # 'Inserir docentes na UC '
+    ucs_all_mat=dfdsd.loc[dfdsd['Inserir docentes na UC '].isin(list(docs_mat)) ,'Nome da UC'].unique()
+    ucs_not_mat=list(set(ucs_all_mat).difference(set(ucs_mat)))
+    df=pd.concat([df,dfucs.loc[dfucs['Nome da UC'].isin(ucs_not_mat) ,output_columns]],axis=0)
+    df=df.sort_values(by=['ciclo de estudos','Nome da UC'])
+    # corrigir nomes das colunas
+    df=df.rename(columns={'nomeResponsavel': 'Nome Responsável'})
+    df=df.rename(columns={'Áreas Disicplinares': 'Áreas Disciplinares'})
+    html_table = df.to_html(index=False)
+    # save HTML table to a file
+    with open('UCs_SM.html', 'w',encoding='utf-8') as f:
+        f.write(html_table)
+
+
 
 
