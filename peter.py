@@ -24,10 +24,10 @@ import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
 
 ########################################################################################################
-SAVE_HTML_MAT=True
+SAVE_HTML_MAT=False
 
-fnDSD="DSD_2324_2maio2023.xlsx" #  "DSD_v1_teste.xlsx"; 
-fnResumo="resumo_DSD_2324_2maio.xlsx"
+fnDSD="DSD_2324_15maio2023.xlsx" #  "DSD_v1_teste.xlsx"; 
+fnResumo="resumo_DSD_2324_15maio.xlsx"
 VALIDATION_VALUE='Inserir docente'
 # worksheets de input
 ws_name_preencher='DSD (para preencher)'
@@ -261,5 +261,8 @@ if SAVE_HTML_MAT:
         f.write(html_table)
 
 
-
+# horas totais em cada ciclo
+dfinfo.head()
+dfinfo.duplicated
+dfinfo.drop_duplicates().groupby('ciclo de estudos')['Total Horas previsto .1'].sum()
 
