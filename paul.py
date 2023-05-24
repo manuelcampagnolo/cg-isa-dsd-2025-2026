@@ -5,30 +5,6 @@
 # Usa um dicionário de colunas e opções do menu drop down para construir um ficheiro Excel
 #######################################################
 
-""" FICHEIRO DE SERVIÇO EXTERNO PREVISTO
-Irá incluir serviço docente em:
-1-    UC optativas de 3º ciclo do ISA responsabilidade do ISA (???)
-2-    UC com docentes do ISA mas da responsabilidade de outras instituições, em parceria
-3-    UC de outras instituições em que os docentes do ISA colaboram, sem parceria, mas com autorização e não pago
-4-    Cursos de formação avançada conferentes de diploma e/ou com ECTS, com autorização, não pagos, do ISA ou de outras instituições
-
-Lista de campos/colunas
-1-    Nome disciplina/formação
-2-    Tipo (permanente, temporária, periódica)
-3-    Funciona dependente do nº alunos S/N
-4-    Curso a que pertence
-5-    Parceria estabelecida S/N
-6-    Instituição
-7-    Link do curso
-8-    Ciclo (1º, 2º, 3º, outro)
-9-    Responsável do Ciclo
-10-    Responsável de UC/curso
-11-    Email responsável UC
-12-    Docente do ISA que participa (e código)
-13-    Ano letivo
-14-    Semestre
-15-    Número de horas letivas """
-
 
 import openpyxl
 from openpyxl.worksheet.datavalidation import DataValidation
@@ -54,7 +30,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 ##############################################################################
 # converter DataFrame para openpyxl WorkSheet (ao nível da célula)
 from openpyxl.utils.dataframe import dataframe_to_rows
-def df_to_excel(df, ws, header=True, index=True, startrow=0, startcol=0):
+def df_to_openpyxl(df, ws, header=True, index=True, startrow=0, startcol=0):
     """Write DataFrame df to openpyxl worksheet ws"""
     # alternativa mais simples:
     # rows = ws.iter_rows()
@@ -80,7 +56,7 @@ def df_to_excel(df, ws, header=True, index=True, startrow=0, startcol=0):
              # my_data_validation.add(cell)
 
 # idem, mas com formatação da largura das colunas para ajustar ao conteúdo
-def df_to_excel_with_columns(df,ws,maxwidth=30,header=True,index=False):
+def df_to_openpyxl_with_columns(df,ws,maxwidth=30,header=True,index=False):
     for column in df.columns:
         # get the column letter
         column_letter = get_column_letter(df.columns.get_loc(column) + 1)
@@ -90,7 +66,7 @@ def df_to_excel_with_columns(df,ws,maxwidth=30,header=True,index=False):
         # set the column width
         ws.column_dimensions[column_letter].width = width
         # write 
-        df_to_excel(df,ws,header=True,index=False)
+        df_to_openpyxl(df,ws,header=True,index=False)
 
 #########################################################################
 # Fim funções 
@@ -99,7 +75,8 @@ def df_to_excel_with_columns(df,ws,maxwidth=30,header=True,index=False):
 # ficheiros de input
 # ficheiro RH enviado pela Madalena 18 de maio 2023
 fn_docentes='nomes_docentes_codigos_RH_17maio2023.xlsx'
-fn_out='DSD_2023_2024_fora_ISA.xlsx'
+fn_out='DSD_2023_2024_servico_externo_v6.xlsx'
+nomeWS='Servico_externo'
 Nmax=100 # número de linhas do ficheiro a preencher
 
 ########################################################
@@ -120,46 +97,60 @@ dfdocs.head()
 
 # TRABALHAR EM PANDAS...
 
+############################################## lista docentes
+mycol='Nome completo'
+dfdocs['Grupo de empregados'].unique()
+doc_invest=dfdocs.loc[(dfdocs['Grupo de empregados']=='Docentes')|(dfdocs['Grupo de empregados']=='Investigadores'),mycol]
+nao_docentes=dfdocs.loc[dfdocs['Grupo de empregados']=='Não Docente',mycol]
+[x for x in nao_docentes if 'Mariana' in x]
+mylist = doc_invest.copy()
+l0=len(mylist)
+# limpar
+mylist = [item for item in mylist if item != "" or item is not None]
+if (len(mylist) < l0): print('removed items')
+listadocentes=mylist.copy()
 
 ######################################################## dataframe para openpyxl
 # CRIAR NOVO openpyxl WorkBook (target)
 ################################# criar workbook
 wb_target = openpyxl.Workbook()
 ################################# criar worksheet 
-ws_target=wb_target.create_sheet('Docência Fora do ISA')
+ws_target=wb_target.create_sheet(nomeWS)
 ########################### Exportar DataFrame para openpyxl WorkSheet
-#df_to_excel_with_columns(dfdocs, ws_target)
+#df_to_openpyxl_with_columns(dfdocs, ws_target)
 #####################################################
 
 # TRABALHAR EM OPENPYXL ...
 
 ####################################### Criar lista para drop-down menu
-mycol='Nome completo'
-mylist = dfdocs[mycol]
-l0=len(mylist)
-# limpar
-mylist = [item for item in mylist if item != "" or item is not None]
-if (len(mylist) < l0): print('removed items')
-
 start_year=2023
 num_years=10
 academic_years = [f"{year}-{year+1}" for year in range(start_year, start_year + num_years)]
 semestres = [f"{s}o" for s in range(1,11)]
-mydict={'Docente do ISA que participa': mylist,
-        'Nome disciplina/formação': None,
-        'Tipo': ['permanente', 'temporária', 'periódica'],
-        'Funciona dependente do nº alunos': ['Sim','Não'],
-        'Curso a que pertence': None,
-        'Parceria estabelecida': ['Sim','Não'],
-        'Instituição': None,
-        'Link do curso': None,
-        'Ciclo': ['1º', '2º', '3º', 'outro'],
-        'Responsável do Ciclo': None,
-        'Responsável de UC/curso': None,
-        'Email responsável UC': None,
-        'Ano letivo': academic_years,
-        'Semestre': semestres,
-        'Número horas letivas no semestre':None}
+SN=['Sim','Não']
+
+mydict={
+ 'Nome do docente': listadocentes,
+        'Nome da UC': None,
+         'Nome do curso': None,
+         'Nível': ['1º ciclo','2º ciclo','3º ciclo','Não conferente de grau'],
+         'Semestre de funcionamento': ['1º','2º','extra-semestre'],
+         'Parceria institucional estabelecida': ['Sim','Não'],
+         'Com centro de custos ISA ou de empresas do ISA': ['Sim','Não'],
+         'Ocorrência': ['Todos os anos', 'Não regular'],
+         'Instituição responsável': None,
+         'Link do curso': None,
+         'Responsável do Curso': None,
+         'Responsável de UC': None,
+         'Email responsável UC': None,
+         'Funcionamento': ['obrigatória','optativa'],
+         'Funciona dependente do nº alunos': ['Sim','Não'],
+         'Número mínimo de alunos para funcionar': None,
+         'Número horas letivas':None
+}
+
+len(mydict)
+
 
 # Create a border with specific line style and color
 border = Border(
@@ -171,6 +162,7 @@ border = Border(
 
 # cor light red, light yellow
 fill_red = PatternFill(start_color="FFC0CB", end_color="FFC0CB", fill_type="solid")
+fill_green = PatternFill(start_color="C0FFCB", end_color="C0FFCB", fill_type="solid")
 fill_yellow = PatternFill(start_color="FFFFE0", end_color="FFFFE0", fill_type="solid") # alpha: 1st 2 characters
 
 
@@ -182,8 +174,12 @@ startcol=0
 for key, value in mydict.items():
     if value is not None:
         df=pd.DataFrame(value,columns=[key])
-        df_to_excel(df, ws_aux, header=True, index=False, startrow=0, startcol=startcol)
+        df_to_openpyxl(df, ws_aux, header=True, index=False, startrow=0, startcol=startcol)
         startcol+=1
+
+# 2a: change row height
+for k in range(Nmax):
+    ws_target.row_dimensions[k+1].height = 25 # mudar altura da linha
 
 # 2. criar data validation para cada item e associar às células de target
 startcol=0 # percorre as colunas em InfoAux
@@ -193,9 +189,10 @@ for key, value in mydict.items():
     col_target=get_column_letter(idx_target+1) # col letter in target
     cell=ws_target[col_target+'1'] # 1a linha
     cell.value=key
-    cell.fill=fill_red
+    cell.fill=fill_green
     cell.border = border
     if value is not None:
+        cell.fill=fill_red # 1a linha ainda
         # column width
         lens = [len(element) for element in value]
         lens.append(len(key))
@@ -210,9 +207,11 @@ for key, value in mydict.items():
         # cell values
         for k in range(Nmax):
             cell=ws_target[get_column_letter(idx_target+1)+str(k+2)] # colocar a partir da 2a linha
+            if idx_target==0 and k==0: cell.value='Clicar para selecionar docente'
             my_data_validation.add(cell) # só pode ser 1 célula
             cell.protection = Protection(locked=False)
             cell.border = border
+            # pintar metade das linhas 
             if k%2 == 0: cell.fill=fill_yellow
         startcol+=1
     else:
@@ -224,7 +223,7 @@ for key, value in mydict.items():
             if k%2 == 0: cell.fill=fill_yellow
     idx_target+=1
 
-def df_to_excel_with_columns(df,ws,maxwidth=30,header=True,index=False):
+def df_to_openpyxl_with_columns(df,ws,maxwidth=30,header=True,index=False):
     for column in df.columns:
         # get the column letter
         column_letter = get_column_letter(df.columns.get_loc(column) + 1)
@@ -234,7 +233,7 @@ def df_to_excel_with_columns(df,ws,maxwidth=30,header=True,index=False):
         # set the column width
         ws.column_dimensions[column_letter].width = width
         # write 
-        df_to_excel(df,ws,header=True,index=False)
+        df_to_openpyxl(df,ws,header=True,index=False)
 
 ########################################################
 # PROTEGER E EXPORTAR :  de openpyxl para Excel
@@ -248,10 +247,52 @@ ws_target.protection.sheet = True
 ws_target.protection.password = 'minha_password'
 ws_aux.protection.sheet = True
 ws_aux.protection.password = 'minha_password'
+# hide worksheet
+ws_aux.sheet_state = 'hidden'
+# Freeze the top row
+ws_target.freeze_panes = "A2"
 
-##################### de openpyxl para Excel
+##################### de openpyxl para fichero Excel
 wb_target.save(fn_out)
 ################################### Fechar ligação a openpyxl WorkBook
 wb.close
 wb_target.close
 #########################################################
+""" 
+# https://stackoverflow.com/questions/54071663/how-to-add-drop-down-list-in-excel-cell-using-win32com-python
+import win32com.client as win32
+
+# Open Excel application
+excel_app = win32.Dispatch("Excel.Application")
+# Open workbook
+path=r'C:\temp\cg-isa'
+workbook = excel_app.Workbooks.Open(os.path.join(path,fn_out))
+# Select worksheet
+worksheet = workbook.Worksheets(nomeWS)
+# the data validation in the range A1:A10 will use the values from the B1:B5 range as the validation list
+# Define the range for data validation
+validation_range = worksheet.Range("A1:A"+str(Nmax+1))
+validation= worksheet.Cells(2,1).Validation
+validation = validation_range.Validation
+# Define the range for validation list
+M=len(listadocentes)
+col_aux='A'
+formula='=InfoAux!{}{}:{}{}'.format(col_aux,'2',col_aux,str(1+M))
+print(formula)
+# Add data validation to the range
+
+
+validation.Add(Type=3, AlertStyle=1, Operator=1, Formula1=formula)
+
+# Enable autocomplete
+validation.InCellDropdown = True
+validation.ShowInput = False
+validation.ShowError = False
+
+
+
+workbook.Save()
+workbook.Close()
+# Quit Excel application
+excel_app.Quit()
+ """
