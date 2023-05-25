@@ -252,6 +252,12 @@ ws_aux.sheet_state = 'hidden'
 # Freeze the top row
 ws_target.freeze_panes = "A2"
 
+""" # Freeze the top row, and add filter 
+for ws in [wsr_ucs,wsr_ucs_docentes,wsr_docentes,wsr_info]:
+    ws.freeze_panes = "A2"
+    ws.auto_filter.ref = ws.dimensions """
+
+
 ##################### de openpyxl para fichero Excel
 wb_target.save(fn_out)
 ################################### Fechar ligação a openpyxl WorkBook
