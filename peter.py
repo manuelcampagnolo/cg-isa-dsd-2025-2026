@@ -26,8 +26,8 @@ warnings.filterwarnings("ignore", category=UserWarning)
 ########################################################################################################
 SAVE_HTML_MAT=False
 
-fnDSD="DSD_2324_15maio2023.xlsx" #  "DSD_v1_teste.xlsx"; 
-fnResumo="resumo_DSD_2324_15maio.xlsx"
+fnDSD="DSD_2324_25maio2023.xlsx" #  "DSD_v1_teste.xlsx"; 
+fnResumo="resumo_DSD_2324_25maio.xlsx"
 VALIDATION_VALUE='Inserir docente'
 # worksheets de input
 ws_name_preencher='DSD (para preencher)'
@@ -230,6 +230,11 @@ df_to_excel_with_columns(dfucs, wsr_ucs)
 df_to_excel_with_columns(dfdsd, wsr_ucs_docentes)
 df_to_excel_with_columns(dfhd, wsr_docentes)
 df_to_excel_with_columns(dfinfo, wsr_info)
+
+# Freeze the top row, and add filter 
+for ws in [wsr_ucs,wsr_ucs_docentes,wsr_docentes,wsr_info]:
+    ws.freeze_panes = "A2"
+    ws.auto_filter.ref = ws.dimensions
 
 if 'Sheet' in wbr.sheetnames:  # remove default sheet
     wbr.remove(wbr['Sheet'])
