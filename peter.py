@@ -1,7 +1,7 @@
 ######################################################
 # Manuel Campagnolo (abril 2023)
 # ISA/ULIsboa
-# script para preparar ficheiro Excel DSD ISA 2023-2024
+# script para preparar resumo do ficheiro Excel DSD ISA 2023-2024
 #######################################################
 
 import openpyxl
@@ -26,8 +26,8 @@ warnings.filterwarnings("ignore", category=UserWarning)
 ########################################################################################################
 SAVE_HTML_MAT=False
 
-fnDSD="DSD_2324_25maio2023.xlsx" #  "DSD_v1_teste.xlsx"; 
-fnResumo="resumo_DSD_2324_25maio.xlsx"
+fnDSD="DSD_2324_27maio.xlsx" #  "DSD_v1_teste.xlsx"; 
+fnResumo="resumo_DSD_2324_27maio.xlsx"
 VALIDATION_VALUE='Inserir docente'
 # worksheets de input
 ws_name_preencher='DSD (para preencher)'
