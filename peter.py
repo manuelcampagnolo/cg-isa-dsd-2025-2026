@@ -27,7 +27,9 @@ warnings.filterwarnings("ignore", category=UserWarning)
 SAVE_HTML_MAT=False
 
 fnDSD="DSD_2324_12jun2023_CorrigidoML_desprotegido_editado_MLC.xlsx"  #"DSD_2324_27maio.xlsx" #  "DSD_v1_teste.xlsx"; 
-fnResumo="resumo_DSD_2324_12junho2023__hf_hd.xlsx"
+docente_extra=('Duarte Neiva', 'Química',5)
+
+fnResumo="resumo_DSD_2324_16junho2023.xlsx"
 VALIDATION_VALUE='Inserir docente'
 # worksheets de input
 ws_name_preencher='DSD (para preencher)'
@@ -185,6 +187,9 @@ def nomeColuna2letter(ws,nome):
 dfinfo= pd.read_excel(fnDSD, sheet_name=ws_name_info) 
 dfdsd= pd.read_excel(fnDSD, sheet_name=ws_name_preencher)
 dfdsd.columns
+
+#dfdsd.loc[dfdsd['Nome da UC']==docente_extra[1],[column_key]].iloc[docente_extra[2]]=docente_extra[0]
+dfdsd.loc[1967,column_key]=docente_extra[0]
 
 # info docentes em DSD
 dfaux=dfdsd[cols_horas_docentes]
