@@ -261,5 +261,6 @@ if SAVE_HTML_MAT:
         f.write(html_table)
 
 
+dfinfo.columns
 
-
+dfhd.groupby(['Posição'])['Horas totais docente'].sum() 
