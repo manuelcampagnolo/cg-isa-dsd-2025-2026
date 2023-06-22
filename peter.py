@@ -188,13 +188,17 @@ dfinfo= pd.read_excel(fnDSD, sheet_name=ws_name_info)
 dfdsd= pd.read_excel(fnDSD, sheet_name=ws_name_preencher)
 dfdsd.columns
 
+# adicionar docentes e serviço respetivo
 #dfdsd.loc[dfdsd['Nome da UC']==docente_extra[1],[column_key]].iloc[docente_extra[2]]=docente_extra[0]
+# linhas que correspondem à UC do docente_extra
+dfdsd.loc[dfdsd['Nome da UC']==docente_extra[1],[column_key]]
+
 dfdsd.loc[1967,column_key]=docente_extra[0]
 
 # info docentes em DSD
 dfaux=dfdsd[cols_horas_docentes]
 #dfaux.columns
-dfaux=dfaux.dropna()
+dfaux=dfaux.dropna() # para eliminar linhas sem informação
 dfaux=dfaux.drop(['Horas semanais docente', 'Horas totais docente'],axis=1)
 len(dfaux) #153 # todos têm Posição
 
@@ -209,7 +213,7 @@ dfinfo = dfinfo.dropna(axis=1, how='all')
 dfdsd.loc[dfdsd[colResponsavel]=='sim',newcolResponsavel]=dfdsd.loc[dfdsd[colResponsavel]=='sim',column_key]
 #dfdsd.head(20)[newcolResponsavel]
 
-# preencher algumas colunas com o valor acima
+# preencher algumas colunas com o valor que lhe está acima na tabela
 for col in colunas_FOS+colunas_nome_UC+[newcolResponsavel]:
     dfdsd=fill_empty_cells(dfdsd, col)
 print(dfdsd.shape)
@@ -219,8 +223,9 @@ print(dfdsd.shape)
 
 # remover linhas com VALIDATION_VALUE ou em branco na coluna column_key: se não tiver sido indicado docente, a linha é descartada
 dfdsd=dfdsd[dfdsd[column_key]!= VALIDATION_VALUE]
+# as linhas seguintes eliminam todas as linhas de dfdsd que não tenham um docente escolhido no drop-down menu
 dfdsd=dfdsd[dfdsd[column_key]!= DAA] # novo junho 2023: se é 'docente a atribuir' é descartado
-dfdsd=dfdsd[dfdsd[column_key].notna()]
+dfdsd=dfdsd[dfdsd[column_key].notna()]  # se alguém apagou a célula fiva vazio e é lido como NA, e aqui é descartado
 print(dfdsd.shape)
 
 # drop 2nd row
@@ -233,6 +238,9 @@ dfdsd=dfdsd[colunas_FOS+[colResponsavel, newcolResponsavel,column_key]+colunas_n
 for col in cols_horas:
     dfdsd[col] = pd.to_numeric(dfdsd[col], errors='coerce')
 #dfdsd.dtypes
+
+# criar novas linhas dos docentes_extra?
+dfdsd[dfdsd['Código UC']==2450]
 
 # Contabilizar as horas em falta a partir de dfdsd (novo: junho 2023)
 dfdsd[soma_horas_docente_uc]=dfdsd[cols_horas].sum(axis=1)
