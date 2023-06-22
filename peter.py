@@ -1,7 +1,7 @@
 ######################################################
 # Manuel Campagnolo (abril 2023)
 # ISA/ULIsboa
-# script para preparar ficheiro Excel DSD ISA 2023-2024
+# script para preparar resumo do ficheiro Excel DSD ISA 2023-2024
 #######################################################
 
 import openpyxl
@@ -24,10 +24,12 @@ import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
 
 ########################################################################################################
-SAVE_HTML_MAT=True
+SAVE_HTML_MAT=False
 
-fnDSD="DSD_2324_2maio2023.xlsx" #  "DSD_v1_teste.xlsx"; 
-fnResumo="resumo_DSD_2324_2maio.xlsx"
+fnDSD="DSD_2324_12jun2023_CorrigidoML_desprotegido_editado_MLC.xlsx"  #"DSD_2324_27maio.xlsx" #  "DSD_v1_teste.xlsx"; 
+docente_extra=('Duarte Neiva', 'Química',5)
+
+fnResumo="resumo_DSD_2324_16junho2023.xlsx"
 VALIDATION_VALUE='Inserir docente'
 # worksheets de input
 ws_name_preencher='DSD (para preencher)'
@@ -39,7 +41,6 @@ coldoc='AK'
 print(column_index_from_string(coldoc))
 colunas_red=['Grandes Áreas Científicas (FOS)', 'Áreas Científicas (FOS)', 'Áreas Disicplinares', 'Departamento',  'Responsável', 'Nome da UC', 'ciclo de estudos', 'Código UC', 'ano curricular', 'semestre', 'ECTS', 'semanas', 'Total horas da UC', 'Somatório', 'Horas em falta na UC']
 column_codigo_UC_preencher='Código UC'
-column_horas_em_falta_preencher='Horas em falta na UC'
 column_somatorio_preencher= 'Somatório'
 column_preencher_first='Total Horas Teóricas'
 column_preencher_last='Total Horas  Outras'
@@ -70,6 +71,11 @@ col_horas_totais='Horas totais docente'
 col_nome_completo='Nome completo'
 col_posicao='Posição'
 cols_horas_docentes=[col_horas_semanais,col_horas_totais,col_nome_completo,col_posicao]
+
+soma_horas_docente_uc='Soma horas docente UC'
+total_horas_docente='Total horas docente'
+total_horas_docencia_uc='Total horas docentes para UC'
+total_horas_uc_='Total horas UC'
 
 # colunas a apagar em DSD info: funciona
 col_apagar_info_1='Total Horas Somadas '
@@ -155,64 +161,6 @@ def set_border(ws):
         for cell in row:
             cell.border = border
 
-############################################################ funcoes
-# devolve letra da coluna com nome (1a linha) da worksheet ws
-def nomeColuna2letter(ws,nome):
-    headers = [c.value for c in next(ws.iter_rows(min_row=1, max_row=1))]
-    idx=headers.index(nome)
-    return get_column_letter(idx+1)
-
-####################################################################################################################
-
-dfinfo= pd.read_excel(fnDSD, sheet_name=ws_name_info) 
-dfdsd= pd.read_excel(fnDSD, sheet_name=ws_name_preencher)
-dfdsd.columns
-
-# limpar dfinfo
-dfinfo=dfinfo.drop(col_apagar_info_1,axis=1)
-dfinfo=dfinfo.drop(col_apagar_info_2,axis=1)
-dfinfo=dfinfo.drop(col_apagar_info_3,axis=1)
-dfinfo=dfinfo.drop(col_apagar_info_4,axis=1)
-dfinfo = dfinfo.dropna(axis=1, how='all')
-
-#selecionar colunas dos docentes em DSD
-dfhd=dfdsd[cols_horas_docentes]
-dfhd=dfhd.dropna(axis=0)
-dfhd[col_horas_semanais]=dfhd[col_horas_semanais].round(2)
-
-# criar coluna de Responsável
-dfdsd.loc[dfdsd[colResponsavel]=='sim',newcolResponsavel]=dfdsd.loc[dfdsd[colResponsavel]=='sim',column_key]
-#dfdsd.head(20)[newcolResponsavel]
-
-# preencher algumas colunas com o valor acima
-for col in colunas_FOS+colunas_nome_UC+[newcolResponsavel]:
-    dfdsd=fill_empty_cells(dfdsd, col)
-print(dfdsd.shape)
-
-# remover linhas com VALIDATION_VALUE ou em branco na coluna column_key
-dfdsd=dfdsd[dfdsd[column_key]!= VALIDATION_VALUE]
-dfdsd=dfdsd[dfdsd[column_key].notna()]
-print(dfdsd.shape)
-
-# drop 2nd row
-#dfdsd=dfdsd.drop(1)
-
-# remover colunas DSD
-dfdsd=dfdsd[colunas_FOS+[colResponsavel, newcolResponsavel,column_key]+colunas_nome_UC+cols_horas+[column_horas_em_falta_preencher]]
-
-# selecionar as linhas dos responsáveis das UCs
-dfucs=dfdsd[dfdsd[colResponsavel]=='sim']
-dfucs=dfucs[colunas_FOS+[newcolResponsavel]+colunas_nome_UC+[column_horas_em_falta_preencher]]
-
-# eliminar as linhas dos responsáveis
-dfdsd=dfdsd[dfdsd[colResponsavel]!='sim']
-
-############### output
-wbr=openpyxl.Workbook()
-wsr_ucs=wbr.create_sheet('horas_UCs')
-wsr_docentes=wbr.create_sheet('horas_docentes')
-wsr_ucs_docentes=wbr.create_sheet('horas_UCs_docentes')
-wsr_info=wbr.create_sheet('info_UCs')
 
 def df_to_excel_with_columns(df,ws,maxwidth=30,header=True,index=False):
     for column in df.columns:
@@ -226,10 +174,173 @@ def df_to_excel_with_columns(df,ws,maxwidth=30,header=True,index=False):
         # write 
         df_to_excel(df,ws,header=True,index=False)
 
+
+############################################################ funcoes
+# devolve letra da coluna com nome (1a linha) da worksheet ws
+def nomeColuna2letter(ws,nome):
+    headers = [c.value for c in next(ws.iter_rows(min_row=1, max_row=1))]
+    idx=headers.index(nome)
+    return get_column_letter(idx+1)
+
+####################################################################################################################
+
+dfinfo= pd.read_excel(fnDSD, sheet_name=ws_name_info) 
+dfdsd= pd.read_excel(fnDSD, sheet_name=ws_name_preencher)
+dfdsd.columns
+
+#dfdsd.loc[dfdsd['Nome da UC']==docente_extra[1],[column_key]].iloc[docente_extra[2]]=docente_extra[0]
+dfdsd.loc[1967,column_key]=docente_extra[0]
+
+# info docentes em DSD
+dfaux=dfdsd[cols_horas_docentes]
+#dfaux.columns
+dfaux=dfaux.dropna()
+dfaux=dfaux.drop(['Horas semanais docente', 'Horas totais docente'],axis=1)
+len(dfaux) #153 # todos têm Posição
+
+# limpar dfinfo
+dfinfo=dfinfo.drop(col_apagar_info_1,axis=1)
+dfinfo=dfinfo.drop(col_apagar_info_2,axis=1)
+dfinfo=dfinfo.drop(col_apagar_info_3,axis=1)
+dfinfo=dfinfo.drop(col_apagar_info_4,axis=1)
+dfinfo = dfinfo.dropna(axis=1, how='all')
+
+# criar coluna de Responsável
+dfdsd.loc[dfdsd[colResponsavel]=='sim',newcolResponsavel]=dfdsd.loc[dfdsd[colResponsavel]=='sim',column_key]
+#dfdsd.head(20)[newcolResponsavel]
+
+# preencher algumas colunas com o valor acima
+for col in colunas_FOS+colunas_nome_UC+[newcolResponsavel]:
+    dfdsd=fill_empty_cells(dfdsd, col)
+print(dfdsd.shape)
+
+# check
+#dfdsd.loc[dfdsd['Nome da UC']=='Estética e Ética da Paisagem',['Nome da UC', 'nomeResponsavel']]
+
+# remover linhas com VALIDATION_VALUE ou em branco na coluna column_key: se não tiver sido indicado docente, a linha é descartada
+dfdsd=dfdsd[dfdsd[column_key]!= VALIDATION_VALUE]
+dfdsd=dfdsd[dfdsd[column_key]!= DAA] # novo junho 2023: se é 'docente a atribuir' é descartado
+dfdsd=dfdsd[dfdsd[column_key].notna()]
+print(dfdsd.shape)
+
+# drop 2nd row
+#dfdsd=dfdsd.drop(1)
+
+# remover colunas DSD
+dfdsd=dfdsd[colunas_FOS+[colResponsavel, newcolResponsavel,column_key]+colunas_nome_UC+cols_horas+[column_horas_em_falta_preencher]]
+
+# converter horas para numeric
+for col in cols_horas:
+    dfdsd[col] = pd.to_numeric(dfdsd[col], errors='coerce')
+#dfdsd.dtypes
+
+# Contabilizar as horas em falta a partir de dfdsd (novo: junho 2023)
+dfdsd[soma_horas_docente_uc]=dfdsd[cols_horas].sum(axis=1)
+
+# com groupby, somar todas as linhas que correspondem ao mesmo docente
+dfdsd[total_horas_docente] = dfdsd.groupby(column_key)[soma_horas_docente_uc].transform('sum')
+
+if False: 
+    #selecionar colunas dos docentes em DSD
+    dfhd=dfdsd[cols_horas_docentes]
+    dfhd=dfhd.dropna(axis=0)
+    dfhd[col_horas_semanais]=dfhd[col_horas_semanais].round(2)
+
+
+dfdsd.columns
+dfinfo.columns
+
+# Criar e preencher dfucs
+# criar novas colunas em dfdsd e dfinfo com concatenação de nome UC, ciclo, area disciplinar, ano curricular, semestre
+chaves_dfdsd=['Áreas Disicplinares', 'Nome da UC', 'ciclo de estudos', 'ano curricular', 'semestre']
+chaves_dfinfo=['Área disicplinar',  'Nome', 'ciclo de estudos','ano curricular', 'semestre']
+def concat_cols(df,cols):
+    newcol=df[cols[0]].map(str)
+    for i in range(1,len(cols)):
+        newcol=newcol+df[cols[i]].map(str)
+    return newcol
+
+# criar chaves para cruzamento de dfdsd e dfinfo
+dfdsd['keyUC']=concat_cols(dfdsd,chaves_dfdsd)
+dfinfo['keyUC']=concat_cols(dfinfo,chaves_dfinfo)
+
+# criar coluna com código da UC
+dfdsd=pd.merge(dfdsd, dfinfo[['Nome','Código UC.1','Total Horas previsto .1','keyUC']], left_on='keyUC', right_on='keyUC',)
+
+# re-nomear colunas dfdsd
+dfdsd = dfdsd.rename(columns={'Código UC.1': 'codigoUC', 'Total Horas previsto .1': total_horas_uc_})
+
+# com groupby, somar todas as linhas que correspondem à mesma UC
+dfdsd[total_horas_docencia_uc] = dfdsd.groupby('codigoUC')[soma_horas_docente_uc].transform('sum')
+dfdsd[column_horas_em_falta_preencher]=dfdsd[total_horas_uc_]-dfdsd[total_horas_docencia_uc]
+
+# funciona:
+#dfdsd.loc[dfdsd['codigoUC']==1749, cols_horas+[soma_horas_docente_uc]]
+#dfdsd.loc[dfdsd[soma_horas_docente_uc]>0, cols_horas+[soma_horas_docente_uc]].iloc[100]
+
+# selecionar as linhas dos responsáveis das UCs
+dfucs=dfdsd[dfdsd[colResponsavel]=='sim']
+# os códigos de UCs não devem ter repetições
+if dfucs['codigoUC'].duplicated().sum() != 0: 
+    stop
+dfucs=dfucs[colunas_FOS+[newcolResponsavel]+colunas_nome_UC+[total_horas_uc_,total_horas_docencia_uc,column_horas_em_falta_preencher]]
+
+# eliminar as linhas dos responsáveis
+dfdsd=dfdsd[dfdsd[colResponsavel]!='sim']
+
+#################
+dfdsd.columns
+# criar dfhd
+horas_docentes=dfdsd.groupby(column_key)[soma_horas_docente_uc].sum()
+dfhd=pd.merge(dfaux,horas_docentes,left_on='Nome completo',right_index=True, how='left')
+dfhd['Horas semanais']=round(dfhd[soma_horas_docente_uc]/28,2)
+len(dfhd) # 138
+
+
+#################### validação
+
+# # comparar dfhd e dfdsd quando se agrupa horas por docente
+# dfdoc=dfdsd.groupby(column_key)['Soma horas docente UC'].sum()
+# dfdoc=pd.merge(dfdoc, dfhd, on=column_key)
+# dfdoc['diff']=dfdoc['Soma horas docente UC_x']-dfdoc['Soma horas docente UC_y']
+# dfdoc.sort_values(by='diff')
+# dfdoc.sum(axis=0)
+# len(dfdoc)
+# len(dfhd)
+# dfhd
+
+# validação
+# número de horas totais docência
+# em dfdsd
+dfdsd[soma_horas_docente_uc].sum()
+# em dfhd
+dfhd[soma_horas_docente_uc].sum()
+# número total de horas das UCs
+dfucs[total_horas_uc_].sum()
+# total horas em falta
+dfucs[column_horas_em_falta_preencher].sum()
+dfucs[total_horas_uc_].sum()-dfdsd[soma_horas_docente_uc].sum()
+
+############### output
+wbr=openpyxl.Workbook()
+wsr_ucs=wbr.create_sheet('horas_UCs')
+wsr_docentes=wbr.create_sheet('horas_docentes')
+wsr_ucs_docentes=wbr.create_sheet('horas_UCs_docentes')
+wsr_info=wbr.create_sheet('info_UCs')
+
+#cols_dfucs_drop=['keyUC',soma_horas_docente_uc, 'Nome', 'codigoUC']
+cols_dfdsd=['Áreas Disicplinares', 'Departamento', 'Responsável', 'nomeResponsavel','Inserir docentes na UC ', 'Nome da UC', 'Código UC',soma_horas_docente_uc]
+cols_dfinfo_drop=['keyUC']
+
 df_to_excel_with_columns(dfucs, wsr_ucs)
-df_to_excel_with_columns(dfdsd, wsr_ucs_docentes)
+df_to_excel_with_columns(dfdsd[cols_dfdsd], wsr_ucs_docentes)
 df_to_excel_with_columns(dfhd, wsr_docentes)
-df_to_excel_with_columns(dfinfo, wsr_info)
+df_to_excel_with_columns(dfinfo.drop(cols_dfinfo_drop,axis=1), wsr_info)
+
+# Freeze the top row, and add filter 
+for ws in [wsr_ucs,wsr_ucs_docentes,wsr_docentes,wsr_info]:
+    ws.freeze_panes = "A2"
+    ws.auto_filter.ref = ws.dimensions
 
 if 'Sheet' in wbr.sheetnames:  # remove default sheet
     wbr.remove(wbr['Sheet'])
@@ -261,6 +372,12 @@ if SAVE_HTML_MAT:
         f.write(html_table)
 
 
-dfinfo.columns
+# horas totais em cada ciclo
+dfinfo.head()
+dfinfo.duplicated
 
-dfhd.groupby(['Posição'])['Horas totais docente'].sum() 
+# número de UCs
+len(dfinfo)
+# número de horas de UCs pro ciclo
+dfinfo.drop_duplicates().groupby('ciclo de estudos')['Total Horas previsto .1'].sum()
+
