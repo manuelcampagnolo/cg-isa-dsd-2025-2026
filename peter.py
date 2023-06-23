@@ -239,11 +239,27 @@ for col in cols_horas:
     dfdsd[col] = pd.to_numeric(dfdsd[col], errors='coerce')
 #dfdsd.dtypes
 
-# criar novas linhas dos docentes_extra?
-dfdsd[dfdsd['Código UC']==2450]
-
 # Contabilizar as horas em falta a partir de dfdsd (novo: junho 2023)
 dfdsd[soma_horas_docente_uc]=dfdsd[cols_horas].sum(axis=1)
+
+# criar novas linhas dos docentes_extra?
+dfdsd.columns
+dfdsd.loc[dfdsd['Código UC']==2450,[newcolResponsavel,column_key, 'Nome da UC',soma_horas_docente_uc]]
+
+# ideia
+def inserir_docente_horas(df,docente,horas, codigoUC):
+    # 1. copia uma qualquer linha com codigoUC
+    # 2. muda valor de soma_horas_docente_uc
+    # 3. muda column_key (nome do docente)
+    # 4, adiciona nova linha a df
+
+codigoUC=2450
+horas=14
+row=dfdsd[dfdsd[col_codigo_uc]==codigoUC].iloc[0]
+row[column_key]='novo nome'
+row[soma_horas_docente_uc]=horas
+pd.concat([dfdsd,row[:,NULL]])
+
 
 # com groupby, somar todas as linhas que correspondem ao mesmo docente
 dfdsd[total_horas_docente] = dfdsd.groupby(column_key)[soma_horas_docente_uc].transform('sum')
