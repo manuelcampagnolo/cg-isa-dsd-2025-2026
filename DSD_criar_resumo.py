@@ -29,8 +29,11 @@ warnings.filterwarnings("ignore", category=UserWarning)
 SAVE_HTML_MAT=False
 
 fnDSD="DSD_2324_12jun2023_CorrigidoML_desprotegido_editado_MLC.xlsx"  #"DSD_2324_27maio.xlsx" #  "DSD_v1_teste.xlsx"; 
+fnExterno="DSD_2023_2024_servico_externo_v5_revisto_TF_28junho.xlsx"  #"DSD_2324_27maio.xlsx" #  "DSD_v1_teste.xlsx"; 
 #docente_extra=('Duarte Neiva', 'Química',5)
-fnResumo="resumo_DSD_2324_23junho2023.xlsx"
+# Output
+fnResumo="resumo_DSD_2324_29junho2023.xlsx"
+#fnNomePosicao="nomes_docentes_codigos_RH_17maio2023_editado_MLC.xlsx"
 fnNomePosicao="nomes_docentes_codigos_RH_17maio2023_editado_MLC.xlsx"
 
 VALIDATION_VALUE='Inserir docente'
@@ -81,6 +84,9 @@ soma_horas_docente_uc='Soma horas docente UC'
 total_horas_docente='Total horas docente'
 total_horas_docencia_uc='Total horas docentes para UC'
 total_horas_uc_='Total horas UC'
+
+# horas externas
+soma_horas_externo_docente='Horas docência externa'
 
 # colunas a apagar em DSD info: funciona
 col_apagar_info_1='Total Horas Somadas '
@@ -230,13 +236,14 @@ def nomeColuna2letter(ws,nome):
 
 dfinfo= pd.read_excel(fnDSD, sheet_name=ws_name_info) 
 dfdsd= pd.read_excel(fnDSD, sheet_name=ws_name_preencher)
+dfexterno=pd.read_excel(fnExterno, sheet_name='Servico_externo') # adicionei coluna DSD
 dfNomePosicao= pd.read_excel(fnNomePosicao)
 dfhorasextra= pd.read_excel(fnDSD, sheet_name=ws_horas_docentes_extra)
 dfalteraresp= pd.read_excel(fnDSD, sheet_name= ws_mudanca_responsaveis)
 
 dfdsd.loc[dfdsd[column_key]=='Fernando Eduardo Lagos Costa', [ 'Inserir docentes na UC ','Responsável', 'Nome da UC', 'ciclo de estudos', 'Código UC']]
 
-
+dfexterno.columns
 dfdsd.columns # tem 'Código UC'
 dfinfo.columns # tem 'Código UC'
 
@@ -331,7 +338,7 @@ if False:
 # OK: 2 linhas
 #dfdsd.loc[dfdsd[column_key]=='Fernando Eduardo Lagos Costa', ['keyUC','Inserir docentes na UC ','Responsável', 'Nome da UC', 'ciclo de estudos', 'Código UC',total_horas_docente]]
 
-olddf=dfdsd
+olddf=dfdsd.copy()
 # Usar 'Código UC' para cruzar as tabelas e trazer as horas previstas para dfdsd
 dfdsd=pd.merge(dfdsd, dfinfo[['Nome',col_codigo_uc,column_total_horas_info]], on=col_codigo_uc) #,how='left')
 # approximate merge
@@ -367,8 +374,7 @@ dfucs=dfucs[colunas_FOS+[newcolResponsavel]+colunas_nome_UC+[total_horas_uc_,tot
 dfdsd=dfdsd[dfdsd[colResponsavel]!='sim']
 
 
-
-#################
+################# docentes
 dfdsd.columns
 # criar dfhd
 horas_docentes=dfdsd.groupby(column_key)[soma_horas_docente_uc].sum()
@@ -379,9 +385,22 @@ dfhd=pd.merge(dfaux,df_horas_docentes,left_on=col_nome_completo,right_on=column_
 dfhd[soma_horas_docente_uc].sum()
 # tirar para verificar merge how=outer:
 dfhd=dfhd[[col_nome_completo,col_posicao,soma_horas_docente_uc]]
-dfhd['Horas semanais']=round(dfhd[soma_horas_docente_uc]/28,2)
 dfhd=dfhd.dropna(axis=0, how='any')
 len(dfhd) # 138
+
+###################################### juntar informação serviço externo aos docentes
+olddf=dfhd.copy()
+dfhd=olddf.copy()
+horas_externo=dfexterno[dfexterno['DSD']==1].groupby('Nome do docente')['Número horas letivas'].sum()
+df_horas_externo=horas_externo.reset_index().rename(columns={'Número horas letivas': soma_horas_externo_docente})
+# merge dfhd com df_horas_externo
+dfhd=pd.merge(dfhd,df_horas_externo,left_on=col_nome_completo,right_on='Nome do docente', how='left')
+dfhd.columns
+dfhd=dfhd[['Nome completo', 'Posição', 'Soma horas docente UC', 'Horas docência externa']]
+dfhd.loc[dfhd['Horas docência externa'].isna(),['Horas docência externa']]=0
+dfhd['Horas totais']= dfhd['Soma horas docente UC']+dfhd[soma_horas_externo_docente]
+# por semana
+dfhd['Horas semanais']=dfhd['Horas totais'].map(lambda x: round(x/28,2))
 
 
 #################### validação
