@@ -401,7 +401,7 @@ dfhd.loc[dfhd['Horas docência externa'].isna(),['Horas docência externa']]=0
 dfhd['Horas totais']= dfhd['Soma horas docente UC']+dfhd[soma_horas_externo_docente]
 # por semana
 dfhd['Horas semanais']=dfhd['Horas totais'].map(lambda x: round(x/28,2))
-
+dfhd['Horas docência externa'].sum()
 
 #################### validação
 
