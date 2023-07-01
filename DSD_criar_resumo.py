@@ -28,11 +28,11 @@ warnings.filterwarnings("ignore", category=UserWarning)
 ########################################################################################################
 SAVE_HTML_MAT=False
 
-fnDSD="DSD_2324_12jun2023_CorrigidoML_desprotegido_editado_MLC.xlsx"  #"DSD_2324_27maio.xlsx" #  "DSD_v1_teste.xlsx"; 
-fnExterno="DSD_2023_2024_servico_externo_v5_revisto_TF_28junho.xlsx"  #"DSD_2324_27maio.xlsx" #  "DSD_v1_teste.xlsx"; 
+fnDSD="DSD_2324_12jun2023_CorrigidoML_desprotegido_editado_MLC_29junho.xlsx"  #"DSD_2324_27maio.xlsx" #  "DSD_v1_teste.xlsx"; 
+fnExterno="DSD_2023_2024_servico_externo_v6_revisto_TF_DSD_28junho.xlsx" #"DSD_2023_2024_servico_externo_v5_revisto_TF_28junho.xlsx"  #"DSD_2324_27maio.xlsx" #  "DSD_v1_teste.xlsx"; 
 #docente_extra=('Duarte Neiva', 'Química',5)
 # Output
-fnResumo="resumo_DSD_2324_29junho2023.xlsx"
+fnResumo="resumo_DSD_2324_1julho2023.xlsx"
 #fnNomePosicao="nomes_docentes_codigos_RH_17maio2023_editado_MLC.xlsx"
 fnNomePosicao="nomes_docentes_codigos_RH_17maio2023_editado_MLC.xlsx"
 
@@ -398,10 +398,9 @@ dfhd=pd.merge(dfhd,df_horas_externo,left_on=col_nome_completo,right_on='Nome do 
 dfhd.columns
 dfhd=dfhd[['Nome completo', 'Posição', 'Soma horas docente UC', 'Horas docência externa']]
 dfhd.loc[dfhd['Horas docência externa'].isna(),['Horas docência externa']]=0
-dfhd['Horas totais']= dfhd['Soma horas docente UC']+dfhd[soma_horas_externo_docente]
+dfhd['Horas totais']= dfhd['Soma horas docente UC']+dfhd[soma_horas_externo_docente].astype(float)
 # por semana
 dfhd['Horas semanais']=dfhd['Horas totais'].map(lambda x: round(x/28,2))
-dfhd['Horas docência externa'].sum()
 
 #################### validação
 
