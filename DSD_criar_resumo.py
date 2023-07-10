@@ -402,6 +402,8 @@ dfhd['Horas totais']= dfhd['Soma horas docente UC']+dfhd[soma_horas_externo_doce
 # por semana
 dfhd['Horas semanais']=dfhd['Horas totais'].map(lambda x: round(x/28,2))
 
+
+
 #################### validação
 
 # # comparar dfhd e dfdsd quando se agrupa horas por docente
@@ -438,17 +440,23 @@ wsr_info=wbr.create_sheet('info_UCs')
 cols_dfdsd=['Áreas Disicplinares', 'Departamento', 'Responsável', 'nomeResponsavel','Inserir docentes na UC ', 'Nome da UC', col_codigo_uc,soma_horas_docente_uc,column_horas_em_falta_preencher]
 cols_dfinfo_drop=[]
 
-df_to_excel_with_columns(dfucs, wsr_ucs)
-df_to_excel_with_columns(dfdsd[cols_dfdsd], wsr_ucs_docentes)
-df_to_excel_with_columns(dfhd, wsr_docentes)
-df_to_excel_with_columns(dfinfo.drop(cols_dfinfo_drop,axis=1), wsr_info)
+print(dfucs.columns)
+print(dfdsd.columns)
+print(dfhd.columns)
+print(dfinfo.columns)
+
+df_to_excel_with_columns(dfucs.sort_values(by=['Nome da UC']), wsr_ucs)   #
+df_to_excel_with_columns(dfdsd[cols_dfdsd].sort_values(by=['Nome da UC']),wsr_ucs_docentes) # Nome da UC, )
+df_to_excel_with_columns(dfhd.sort_values(by=['Nome completo']), wsr_docentes)   # dfhd=dfhd.sort_values(by=['Nome completo']) # Nome da UC
+df_to_excel_with_columns(dfinfo.drop(cols_dfinfo_drop,axis=1).sort_values(by=['Nome']), wsr_info)
 
 # Freeze the top row, and add filter 
 for ws in [wsr_ucs,wsr_ucs_docentes,wsr_docentes,wsr_info]:
-    #ws.protection.sheet = True
-    #ws.protection.password = 'resumo_DSD_2023_2024'
+    ws.protection.sheet = True
+    ws.protection.password = 'resumo_DSD_2023_2024'
+    #ws.auto_filter.ref = ws.dimensions
     ws.freeze_panes = "A2"
-    ws.auto_filter.ref = ws.dimensions
+    
 
 if 'Sheet' in wbr.sheetnames:  # remove default sheet
     wbr.remove(wbr['Sheet'])
