@@ -445,11 +445,14 @@ df_to_excel_with_columns(dfinfo.drop(cols_dfinfo_drop,axis=1), wsr_info)
 
 # Freeze the top row, and add filter 
 for ws in [wsr_ucs,wsr_ucs_docentes,wsr_docentes,wsr_info]:
+    #ws.protection.sheet = True
+    #ws.protection.password = 'resumo_DSD_2023_2024'
     ws.freeze_panes = "A2"
     ws.auto_filter.ref = ws.dimensions
 
 if 'Sheet' in wbr.sheetnames:  # remove default sheet
     wbr.remove(wbr['Sheet'])
+
 
 wbr.save(fnResumo)
 wbr.close
