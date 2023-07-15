@@ -32,7 +32,7 @@ fnDSD="DSD_2324_12jun2023_CorrigidoML_desprotegido_editado_MLC_29junho.xlsx"  #"
 fnExterno="DSD_2023_2024_servico_externo_v6_revisto_TF_DSD_28junho.xlsx" #"DSD_2023_2024_servico_externo_v5_revisto_TF_28junho.xlsx"  #"DSD_2324_27maio.xlsx" #  "DSD_v1_teste.xlsx"; 
 #docente_extra=('Duarte Neiva', 'Química',5)
 # Output
-fnResumo="resumo_DSD_2324_1julho2023.xlsx"
+fnResumo="resumo_DSD_2324_1julho2023_protegido_v2.xlsx"
 #fnNomePosicao="nomes_docentes_codigos_RH_17maio2023_editado_MLC.xlsx"
 fnNomePosicao="nomes_docentes_codigos_RH_17maio2023_editado_MLC.xlsx"
 
@@ -452,9 +452,10 @@ df_to_excel_with_columns(dfinfo.drop(cols_dfinfo_drop,axis=1).sort_values(by=['N
 
 # Freeze the top row, and add filter 
 for ws in [wsr_ucs,wsr_ucs_docentes,wsr_docentes,wsr_info]:
+    #ws.protection.sheet = False
+    #ws.auto_filter.ref = ws.dimensions
     ws.protection.sheet = True
     ws.protection.password = 'resumo_DSD_2023_2024'
-    #ws.auto_filter.ref = ws.dimensions
     ws.freeze_panes = "A2"
     
 
