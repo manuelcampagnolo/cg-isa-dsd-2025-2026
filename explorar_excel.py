@@ -26,6 +26,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 fn='nomes_docentes_codigos_RH_17maio2023_editado_MLC.xlsx'
 df= pd.read_excel(fn) 
 
+
 for col in df.columns:
     print(col)
     if len(df[col].unique())<50:

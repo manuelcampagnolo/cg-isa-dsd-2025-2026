@@ -458,7 +458,6 @@ for ws in [wsr_ucs,wsr_ucs_docentes,wsr_docentes,wsr_info]:
     ws.protection.password = 'resumo_DSD_2023_2024'
     ws.freeze_panes = "A2"
     
-
 if 'Sheet' in wbr.sheetnames:  # remove default sheet
     wbr.remove(wbr['Sheet'])
 
