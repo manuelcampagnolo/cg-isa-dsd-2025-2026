@@ -20,9 +20,11 @@ PROTECT_WORKSHEET=True # tem que ser True para impedir escrita
 PASSWORD='kathleen'
 
 # input DSD file
+FORCE_OUTPUT_NAME=True
+DSD_OUTPUT_FICH='DSD_2024_2025_responsaveis_UCs_v1.xlsx' # if FORCE_OUTPUT_NAME
 DSD_INPUT_FICH='DSD_inform_2024_2025_v5.xlsx'
 DSD_INPUT_FICH='2024_01_26 DSD_inform_202324_v6-1-1.xlsx (Dados MCaron e Carlos).xlsx'
-DSD_INPUT_FICH='2024_01_26 DSD_inform_202324_v6-1-1.xlsx (Dados MCaron e Carlos)_compact_ML.xlsx'
+DSD_INPUT_FICH='2024_01_26 DSD_inform_202324_v6-1-1.xlsx (Dados MCaron e Carlos)_compact_ML1.xlsx'
 stem=Path(DSD_INPUT_FICH).stem
 suffix=Path(DSD_INPUT_FICH).suffix
 COMPACT='_compact'
@@ -38,7 +40,10 @@ except:
 input_folder= working_dir / 'DSD_2024_2025' / 'input_files'
 output_folder= working_dir / 'DSD_2024_2025' / 'output_files'
 compact_input_file= output_folder  / (stem+COMPACT+suffix)
-output_file=output_folder / (stem+BLOQ+suffix)
+if FORCE_OUTPUT_NAME: 
+    output_file=output_folder / DSD_OUTPUT_FICH
+else:
+    output_file=output_folder / (stem+BLOQ+suffix)
 
 # worksheets and column names
 UC ='uc_2024-25'
