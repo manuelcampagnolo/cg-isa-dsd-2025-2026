@@ -5,6 +5,11 @@ from openpyxl.utils import get_column_letter, column_index_from_string
 from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.styles import PatternFill, Border, Side, Alignment, Protection, Font, colors
 
+def sort_list(list1, list2):
+    zipped_pairs = zip(list2, list1)
+    z = [x for _, x in sorted(zipped_pairs)]
+    return z
+
 def insert_row_at_beginning(df, new_row_dict):
     """
     Inserts a new row at the beginning of a DataFrame.
@@ -185,7 +190,7 @@ def prints_dictionary_of_sheet_and_column_names(workbook, input_file, ws_names=N
         print(key,'=', {key+'_'+x[0:6] : x for x in df.columns})
 
 def simplify_strings(s):
-    ''' removes accents and replaces spaces by _ ; requires unidecode'''
+    ''' removes accents and replaces spaces by _ ; requires unidecode; s is a list of strings'''
     return list(map(lambda x: x.replace(' ','_'),list(map(unidecode, s))))
 
 def df_to_excel(df, ws, header, index, startrow, startcol):

@@ -12,7 +12,7 @@ from pathlib import Path
 import pandas as pd
 from unidecode import unidecode
 from functions import simplify_strings, df_to_excel_with_columns, compact_excel_file, get_letter_from_column_name,unlock_cells,stripe_cells
-from functions import add_suffix_to_duplicates, reorder_and_filter_dataframe, insert_row_at_beginning, insert_row_at_end
+from functions import add_suffix_to_duplicates, reorder_and_filter_dataframe, insert_row_at_beginning, insert_row_at_end,sort_list
 
 
 UNPROTECT_OUTPUT_CELLS=True # para desproteger células com função unlock_cells(ws, col_name, min_row=None, max_row=None):
@@ -22,6 +22,7 @@ PASSWORD='kathleen'
 # input DSD file
 DSD_INPUT_FICH='DSD_inform_2024_2025_v5.xlsx'
 DSD_INPUT_FICH='2024_01_26 DSD_inform_202324_v6-1-1.xlsx (Dados MCaron e Carlos).xlsx'
+DSD_INPUT_FICH='2024_01_26 DSD_inform_202324_v6-1-1.xlsx (Dados MCaron e Carlos)_compact_ML.xlsx'
 stem=Path(DSD_INPUT_FICH).stem
 suffix=Path(DSD_INPUT_FICH).suffix
 COMPACT='_compact'
@@ -96,8 +97,6 @@ except:
     print('ficheiro original compactado')
     sheet_names = pd.ExcelFile(compact_input_file).sheet_names
 
-raise ValueError
-
 # Create a new workbook
 #new_workbook = pd.ExcelWriter(output_file, engine='openpyxl')
 new_workbook = Workbook()
@@ -144,7 +143,8 @@ for sheet_name in sheet_names: #source_workbook.sheetnames:
         df_set_2024=df_com_termo[pd.to_datetime(df_com_termo[RH_data_fim]) > DATA_TERMO_CERTO]
         com_termo_set_2024=list(df_set_2024[RH_nome])
         # criar lista em ordem alfabética de docentes que não estão em contratação
-        outros_docentes=sorted(list(set(list(sem_termo+com_termo_set_2024)).difference(set(docentes_em_contratacao).union(set([RH_nome_pro_bono])))))
+        L=list(set(list(sem_termo+com_termo_set_2024)).difference(set(docentes_em_contratacao).union(set([RH_nome_pro_bono]))))
+        outros_docentes=sort_list(L, simplify_strings(L))
         # list de nomes de todos os potenciais docentes 
         todos_docentes=[RH_nome_pro_bono]+docentes_em_contratacao+outros_docentes
         # ordenar df segundo lista todos_docentes
