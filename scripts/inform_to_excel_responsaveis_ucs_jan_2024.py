@@ -1,3 +1,10 @@
+# input:
+# ficheiro dos serviços com info sobre RH, UCs etc e metadados
+# parâmetros: data final contrato, ...
+# output:
+# ficheiro a partilhar para colocação dos nomes de responsáveis UCs e comentários: 'DSD_2024_2025_responsaveis_UCs.xlsx'
+
+
 from copy import copy
 import openpyxl
 from openpyxl import Workbook
@@ -20,11 +27,14 @@ PROTECT_WORKSHEET=True # tem que ser True para impedir escrita
 PASSWORD='kathleen'
 
 # input DSD file
-FORCE_OUTPUT_NAME=True
-DSD_OUTPUT_FICH='DSD_2024_2025_responsaveis_UCs_v1.xlsx' # if FORCE_OUTPUT_NAME
-DSD_INPUT_FICH='DSD_inform_2024_2025_v5.xlsx'
-DSD_INPUT_FICH='2024_01_26 DSD_inform_202324_v6-1-1.xlsx (Dados MCaron e Carlos).xlsx'
-DSD_INPUT_FICH='2024_01_26 DSD_inform_202324_v6-1-1.xlsx (Dados MCaron e Carlos)_compact_ML1.xlsx'
+FOLDER_SERVICOS= 'ficheiros_servicos_ISA'
+FOLDER_OUTPUT='output_files'
+FOLDER_FICH_RESPONSAVEIS_UCs='ficheiros_responsaveis_ucs'
+FORCE_OUTPUT_NAME=True # para forçar nome do output; caso contrário, é derivado do nome do ficheiro de input
+DSD_OUTPUT_FICH='DSD_2024_2025_responsaveis_UCs.xlsx' # if FORCE_OUTPUT_NAME
+#DSD_INPUT_FICH='DSD_inform_2024_2025_v5.xlsx'
+#DSD_INPUT_FICH='2024_01_26 DSD_inform_202324_v6-1-1.xlsx (Dados MCaron e Carlos).xlsx'
+DSD_INPUT_FICH='2024_01_26 DSD_inform_202324_v6-1-1.xlsx (Dados MCaron e Carlos)_compact_ML3.xlsx'
 stem=Path(DSD_INPUT_FICH).stem
 suffix=Path(DSD_INPUT_FICH).suffix
 COMPACT='_compact'
@@ -33,12 +43,13 @@ BLOQ='_bloq'
 # Load the source workbook
 #input_folder=Path(r'C:\Users\mlc\OneDrive - Universidade de Lisboa\Documents\profissional-isa-cv\cg-isa\DSD_2024_2025\backup_inputs_DSD')
 try:
-    working_dir=Path(__file__).parent # working directory from script location
+    working_dir=Path(__file__).parent.parent # working directory from script location: scripts are in 'scripts' folder
 except:
     working_dir=Path().absolute()
 
-input_folder= working_dir / 'DSD_2024_2025' / 'input_files'
-output_folder= working_dir / 'DSD_2024_2025' / 'output_files'
+
+input_folder= working_dir / 'DSD_2024_2025' / FOLDER_SERVICOS
+output_folder= working_dir / 'DSD_2024_2025' / FOLDER_OUTPUT
 compact_input_file= output_folder  / (stem+COMPACT+suffix)
 if FORCE_OUTPUT_NAME: 
     output_file=output_folder / DSD_OUTPUT_FICH
@@ -51,14 +62,25 @@ UC_uc = 'unidade_curricular'
 UC_resp='responsavel_unidade_curricular'
 UC_sugestoes='sugestões de modificação da info da UC'
 UC_autor_sugestao='autor da sugestão'
+UC_area_cientifica='area_cient' # drop
+UC_numero_alunos='NumeroAlunos' # drop
+UC_ciclo_curso= 'ciclo_curso'
+UC_ciclo_curso_curso='curso' # para filtrar cncg's
+UCMETA='uc_meta'
 RH='RH'
 RH_nome='nome' # nomes docentes
-N_extra_nomes=10
+N_extra_nomes=0
 RH_numero = 'num_pessoal'
 RH_data_fim='data_fim'
 RH_posicao='posicao'
 RH_obs = 'Obs'
-PE='planos_estudos'
+RHPOSICAO='RH_posicao' # drop
+RHMETA='RH_meta'
+PE='planos_estudos' # drop
+AC='AC' #drop
+ACMETA='AC_meta'#drop
+POS='POS' #drop
+UCAREA='uc_AreaCient' # drop
 
 # values: Sheet_column_value
 RH_nome_pro_bono='docente_PRO_BONO' 
@@ -121,12 +143,11 @@ idx_UC_uc,letter_UC_uc=get_letter_from_column_name(df,UC_uc)
 #idx_uc=df.columns.get_loc(UC_uc) + 1
 
 # Iterate through sheets in the source workbook
-# Ensure that RH comes before UC and remove 'planos_estudos'
-sheet_names=[RH,UC]+list(set(sheet_names).difference(set([RH,UC,PE])))
+# Ensure that RH comes before UC and remove 'planos_estudos', etc
+sheet_names=[RH,RHMETA, UC,UCMETA]+list(set(sheet_names).difference(set([RH,RHMETA, UC,UCMETA,PE,AC,ACMETA,POS, RHPOSICAO, UCAREA])))
 for sheet_name in sheet_names: #source_workbook.sheetnames:
-
-    print(sheet_name)
-
+    # for each sheet_name, we copy the contents of the input sheet, create a df, modify df, create validation, and write to workbook with df_to_excel_with_columns
+    print(sheet_name) 
     # Create a new sheet in the new workbook
     new_worksheet = new_workbook.create_sheet(title=sheet_name)
 
@@ -138,7 +159,7 @@ for sheet_name in sheet_names: #source_workbook.sheetnames:
     # ordenar docentes por ordem alfabética, com os novos docentes à cabeça, mais "docente_PRO_BONO"; excluir docentes a termo, com termo antes de set 2024
     # Nota: 'docentes em contratação' podem ter o mesmo nome e por isso é preciso lidar com duplicações
     if sheet_name==RH:
-        df=insert_row_at_beginning(df,{RH_nome: RH_nome_pro_bono, RH_data_fim: RH_data_fim_sem_termo, RH_obs: 'Docente ou especialista não do ISA que participa na docência sem receber pagamento do ISA'})
+        df=insert_row_at_beginning(df,{RH_nome: RH_nome_pro_bono, RH_data_fim: RH_data_fim_sem_termo, RH_obs: 'Docente ou especialista não do ISA que participa na docência sem receber pagamento do ISA: o nome do docente pode ser indicado na coluna de observações'})
         df=add_suffix_to_duplicates(df,RH_nome)
         docentes_em_contratacao=list(df[df[RH_nome].str.contains(RH_nome_em_contratacao, case=False, na=False)][RH_nome])
         # remover docentes com contrato que acaba até 1 de setembro de 2024
@@ -161,6 +182,15 @@ for sheet_name in sheet_names: #source_workbook.sheetnames:
         
     # Criar drop-down menu para inserir nome responsável da UC
     if sheet_name==UC:
+        # remover coluna área cientifica, etc
+        df=df.drop(columns=[UC_area_cientifica,UC_numero_alunos])
+        # re-ordenar UCs pelo nome, mas com cursos CNCG no fim
+        df=add_suffix_to_duplicates(df,UC_uc)
+        cncg=list(df[df[UC_ciclo_curso].str.contains(UC_ciclo_curso_curso, case=False, na=False)][UC_uc])
+        cncg=sort_list(cncg, simplify_strings(cncg))
+        uc_ciclos=list(set(list(df[UC_uc])).difference(set(cncg)))
+        uc_ciclos=sort_list(uc_ciclos, simplify_strings(uc_ciclos))
+        df=reorder_and_filter_dataframe(df, UC_uc, uc_ciclos+cncg)
         # Criar coluna responsável
         if UC_resp not in df.columns: 
             df.insert(idx_UC_uc-1,UC_resp,'') # automatizar .A largura da coluna tem que ser grande para se verem os nomes
@@ -219,5 +249,8 @@ new_workbook.security.workbookPassword = PASSWORD
 new_workbook.security.lockStructure = True
 
 # Save the new workbook
-new_workbook.save(output_file)
+try: 
+    new_workbook.save(output_file)
+except PermissionError:
+    print('File must be in use: close if first please')
 new_workbook.close

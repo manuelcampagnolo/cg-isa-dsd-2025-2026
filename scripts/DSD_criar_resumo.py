@@ -26,15 +26,19 @@ import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
 
 ########################################################################################################
-SAVE_HTML_MAT=False
+SAVE_HTML_MAT=True
+FICH_UCs_SM_HTML='UCs_SM_fev_2024.html'
+FICH_DSD_SM_XLS='DSD_SM_2023_2024_fev_2024.xlsx'
 
-fnDSD="DSD_2324_12jun2023_CorrigidoML_desprotegido_editado_MLC_29junho.xlsx"  #"DSD_2324_27maio.xlsx" #  "DSD_v1_teste.xlsx"; 
-fnExterno="DSD_2023_2024_servico_externo_v6_revisto_TF_DSD_28junho.xlsx" #"DSD_2023_2024_servico_externo_v5_revisto_TF_28junho.xlsx"  #"DSD_2324_27maio.xlsx" #  "DSD_v1_teste.xlsx"; 
+fnDSD=os.path.join('DSD_2023_2024',"DSD_2324_12jun2023_CorrigidoML_desprotegido_editado_MLC_29junho.xlsx")  #"DSD_2324_27maio.xlsx" #  "DSD_v1_teste.xlsx"; 
+fnExterno=os.path.join('DSD_2023_2024',"DSD_2023_2024_servico_externo_v6_revisto_TF_DSD_28junho.xlsx") #"DSD_2023_2024_servico_externo_v5_revisto_TF_28junho.xlsx"  #"DSD_2324_27maio.xlsx" #  "DSD_v1_teste.xlsx"; )
 #docente_extra=('Duarte Neiva', 'Química',5)
 # Output
 fnResumo="resumo_DSD_2324_1julho2023_protegido_v2.xlsx"
+fnResumo="resumo_DSD_2324_feito_em_fev_2024.xlsx"
+PROTECT_SHEET=False
 #fnNomePosicao="nomes_docentes_codigos_RH_17maio2023_editado_MLC.xlsx"
-fnNomePosicao="nomes_docentes_codigos_RH_17maio2023_editado_MLC.xlsx"
+fnNomePosicao=os.path.join('DSD_2023_2024',"nomes_docentes_codigos_RH_17maio2023_editado_MLC.xlsx")
 
 VALIDATION_VALUE='Inserir docente'
 # worksheets de input
@@ -317,7 +321,6 @@ dfdsd[total_horas_docente] = dfdsd.groupby(column_key)[soma_horas_docente_uc].tr
 # OK: tem duas linhas
 # dfdsd.loc[dfdsd[column_key]=='Fernando Eduardo Lagos Costa', [ 'Inserir docentes na UC ','Responsável', 'Nome da UC', 'ciclo de estudos', 'Código UC',total_horas_docente]]
 
-dfdsd.columns
 dfinfo.columns
 
 # Criar e preencher dfucs
@@ -367,7 +370,7 @@ dfdsd[column_horas_em_falta_preencher]=dfdsd[total_horas_uc_]-dfdsd[total_horas_
 dfucs=dfdsd[dfdsd[colResponsavel]=='sim']
 # os códigos de UCs não devem ter repetições
 if dfucs[col_codigo_uc].duplicated().sum() != 0: 
-    stop
+    raise ValueError('códigos de UCs com repetições')
 dfucs=dfucs[colunas_FOS+[newcolResponsavel]+colunas_nome_UC+[total_horas_uc_,total_horas_docencia_uc,column_horas_em_falta_preencher]]
 
 # eliminar as linhas dos responsáveis
@@ -454,7 +457,7 @@ df_to_excel_with_columns(dfinfo.drop(cols_dfinfo_drop,axis=1).sort_values(by=['N
 for ws in [wsr_ucs,wsr_ucs_docentes,wsr_docentes,wsr_info]:
     #ws.protection.sheet = False
     #ws.auto_filter.ref = ws.dimensions
-    ws.protection.sheet = True
+    ws.protection.sheet = PROTECT_SHEET
     ws.protection.password = 'resumo_DSD_2023_2024'
     ws.freeze_panes = "A2"
     
@@ -483,9 +486,11 @@ if SAVE_HTML_MAT:
     # corrigir nomes das colunas
     df=df.rename(columns={'nomeResponsavel': 'Nome Responsável'})
     df=df.rename(columns={'Áreas Disicplinares': 'Áreas Disciplinares'})
+    # códigos das UC:
+    sm_ucs=list(df[col_codigo_uc])
     html_table = df.to_html(index=False)
     # save HTML table to a file
-    with open('UCs_SM.html', 'w',encoding='utf-8') as f:
+    with open(FICH_UCs_SM_HTML, 'w',encoding='utf-8') as f:
         f.write(html_table)
 
 
@@ -498,3 +503,9 @@ len(dfinfo)
 # número de horas de UCs pro ciclo
 dfinfo.drop_duplicates().groupby('ciclo de estudos')['Total Horas previsto '].sum()
 
+#########
+print(sm_ucs)
+print(dfdsd.columns)
+cond=dfdsd['Código UC'].isin(sm_ucs) and dfdsd['semestre']=='2º'
+dfdsd=dfdsd[cond][['nomeResponsavel','Inserir docentes na UC ', 'Nome da UC', 'Código UC', 'semestre','Soma horas docente UC']]
+dfdsd.to_excel(FICH_DSD_SM_XLS,index=False) 

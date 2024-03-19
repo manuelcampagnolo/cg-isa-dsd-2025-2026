@@ -1,3 +1,7 @@
+# ler ficheiro Excel e criar ficheiro mais simples, com prefixo '_compact.xlsx'
+# possivelmente o script poderia ser simplificado usando pandas
+# ver função compact_excel_file(input_file, output_file) que usa pandas
+
 from copy import copy
 import openpyxl
 from openpyxl import load_workbook
@@ -9,7 +13,6 @@ Ler input
 
 """
 
-
 DSD_INPUT_FICH='DSD_inform_2024_2025_v5.xlsx'
 PROTECT_OUTPUT_CELLS=True
 
@@ -20,7 +23,7 @@ BLOQ='_bloq'
 
 # Load the source workbook
 #input_folder=Path(r'C:\Users\mlc\OneDrive - Universidade de Lisboa\Documents\profissional-isa-cv\cg-isa\DSD_2024_2025\backup_inputs_DSD')
-working_dir=Path(__file__).parent # working directory from script location
+working_dir=Path(__file__).parent.parent # working directory from script location
 input_folder= working_dir / 'DSD_2024_2025' / 'input_files'
 output_folder= working_dir / 'DSD_2024_2025' / 'output_files'
 # Try to read smaller file; otherwise read original file and create smaller file
@@ -30,8 +33,6 @@ except:
     source_workbook = load_workbook(input_folder  / DSD_INPUT_FICH)  # demora
     source_workbook.save(output_folder  / (stem+COMPACT+suffix))
 output_file=output_folder / (stem+BLOQ+suffix)
-
-raise ValueError
 
 # Create a new workbook
 new_workbook = openpyxl.Workbook()
