@@ -587,3 +587,10 @@ def replace_values_in_string(s, df):
     for index, row in df.iterrows():
         modified_s = modified_s.replace(row[0], row[1])
     return modified_s
+
+# Define a function to generate unique codes for values with length less than 4
+def generate_code(value,L):
+    if len(value) < L:
+        return '00000' + str(hash(value))
+    else:
+        return value
