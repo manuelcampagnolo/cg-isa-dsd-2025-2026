@@ -494,6 +494,9 @@ def stripe_cells(ws,fill_color,border):
 def get_letter_from_column_name(df,col_name):
     return df.columns.get_loc(col_name) + 1, get_column_letter(df.columns.get_loc(col_name) + 1)
 
+def get_next_letter_from_column_name(df,col_name):
+    return df.columns.get_loc(col_name) + 2, get_column_letter(df.columns.get_loc(col_name) + 2)
+
 def compact_excel_file(input_file, output_file):
     tabs = pd.ExcelFile(input_file).sheet_names 
     #print(tabs)

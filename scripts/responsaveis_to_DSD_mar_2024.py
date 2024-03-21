@@ -20,7 +20,7 @@ from openpyxl.utils import get_column_letter, column_index_from_string, coordina
 from openpyxl.styles import PatternFill, Border, Side, Alignment, Protection, Font, colors
 from functions import simplify_strings, df_to_excel_with_columns, compact_excel_file, get_letter_from_column_name,unlock_cells,stripe_cells
 from functions import add_suffix_to_duplicates, reorder_and_filter_dataframe, insert_row_at_beginning, insert_row_at_end,sort_list
-from functions import replace_values_in_string, generate_code
+from functions import replace_values_in_string, generate_code, get_next_letter_from_column_name
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
 pd.options.mode.copy_on_write = True
@@ -67,6 +67,7 @@ UC_codigo='cod_uc'
 UC_resp='responsavel_unidade_curricular' #
 UC_resp_justif='justicação novo responsável UC'
 UC_resp_cc='responsável confirmado CC'
+UC_mudanca_resp='Houve mudança'
 UC_sugestoes='sugestões de modificação da info da UC'
 UC_autor_sugestao='autor da sugestão'
 UC_ciclo_curso = 'ciclo_curso'
@@ -74,7 +75,7 @@ UC_horas_contacto = 'h_contacto_total'
 UC_ano='ano'
 UC_sem='sem'
 UC_horas_totais='horas totais'
-UC_horas_totais_sugeridas='horas totais sugeridas'
+UC_horas_totais_sugeridas='horas totais revistas'
 UC_dif_horas='diferença horas'
 UC_horas_justif='justificação horas totais'
 # as outras colunas vem de UC:
@@ -118,7 +119,7 @@ RH_nome_pro_bono='docente_PRO_BONO'
 RH_nome_em_contratacao='Docente em contratação'
 RH_data_fim_sem_termo='sem termo'
 DATA_TERMO_CERTO='2024-09-01'
-N_extra_nomes=3
+N_extra_nomes=0
 N_docentes=18
 
 # desproteger células:
@@ -139,7 +140,9 @@ POS = {'POS_posica': 'posicao', 'POS_h_min': 'h_min', 'POS_h_max': 'h_max', 'POS
 
 # cor light red, light yellow
 fill_red = PatternFill(start_color="FFC0CB", end_color="FFC0CB", fill_type="solid")
+fill_red = PatternFill(bgColor="FFC0CB",fill_type="solid")
 fill_green = PatternFill(start_color="C0FFCB", end_color="C0FFCB", fill_type="solid")
+fill_updated=PatternFill(start_color="FFDBE9",fill_type="solid") # light pink
 fill_yellow = PatternFill(start_color="FFFFE0", end_color="FFFFE0", fill_type="solid") # alpha: 1st 2 characters
 fill_light_yellow = PatternFill(start_color="FFFFED", end_color="FFFFED", fill_type="solid") 
 thin_border=Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
@@ -194,10 +197,12 @@ df_uc[UC_horas_totais_sugeridas] = df_uc[UC_horas_totais]
 df_uc[UC_dif_horas]=0
 df_uc[UC_horas_justif]=''
 df_uc[UC_resp_justif]=''
+df_uc[UC_mudanca_resp]=''
 # re-ordenar colunas UC
-df_uc=df_uc[[UC_ciclo_curso, UC_obrigatoria,UC_optativa, UC_codigo, 'uc_interna', UC_ano,UC_sem,'ECTS',UC_uc,UC_resp_cc,
+df_uc=df_uc[[UC_ciclo_curso, UC_obrigatoria,UC_optativa, UC_codigo, 'uc_interna', UC_ano,UC_sem,'ECTS',UC_uc,
              'h_trab_totais', 'T', 'TP','PL', 'TC', 'S', 'E', 'OT', 'O',
-             UC_horas_contacto, UC_horas_totais, UC_horas_totais_sugeridas,UC_dif_horas,UC_horas_justif,'obs',  UC_autor_sugestao, UC_sugestoes,UC_resp,UC_resp_justif]]
+             UC_horas_contacto, UC_horas_totais, UC_horas_totais_sugeridas,UC_dif_horas,UC_horas_justif,'obs',  
+             UC_autor_sugestao, UC_sugestoes,UC_resp_cc,UC_resp,UC_mudanca_resp, UC_resp_justif]]
 
 # main dataframe for DSD
 # select columns to be shown: os nomes das colunas de DSD e de UC são iguais nesta altura
@@ -282,12 +287,17 @@ for sheet_name in sheet_names:
         idx,letter=get_letter_from_column_name(df_uc,UC_resp)
         dv_resp.add(f"${letter}$2:{letter}${N_ucs+1}") # creates drop-down menu.
 
-    # Write the DataFrame to the new workbook
+    # Write the DataFrame to the new workbook: determines max width of columns
     df_to_excel_with_columns(df,new_worksheet,maxwidth=30,header=True,index=False,startrow=0, startcol=0)
+
     # Apply filters to the first row
     if '_meta' not in sheet_name:
         new_worksheet.auto_filter.ref = new_worksheet.dimensions
-        new_worksheet.freeze_panes = "A2"
+        if sheet_name==UC:
+            idx,letter=get_next_letter_from_column_name(df_uc,UC_uc)
+            new_worksheet.freeze_panes = f"{letter}{2}"
+        else:
+            new_worksheet.freeze_panes = "A2"
     # stripes
     stripe_cells(new_worksheet, fill_color=fill_light_yellow,border=thin_border)    
     
@@ -306,6 +316,7 @@ for sheet_name in sheet_names:
             unlock_cells(new_worksheet,letter_autor,min_row=i*N_docentes+2,max_row=(i+1)*N_docentes-1,fill_color=fill_green,border=thin_border)
             unlock_cells(new_worksheet,letter_obs,min_row=i*N_docentes+2,max_row=(i+1)*N_docentes-1,fill_color=fill_green,border=thin_border)
         # células para número de horas docência (VLOOKUP)
+        idx_docente,letter_docente=get_letter_from_column_name(df_dsd,DSD_resp)
         idx_horas,letter_horas=get_letter_from_column_name(df_dsd,DSD_horas_docente)
         idx_codigo,letter_codigo=get_letter_from_column_name(df_dsd,UC_codigo)
         idx_codigo_UC,letter_codigo_UC=get_letter_from_column_name(df_uc,UC_codigo)
@@ -316,12 +327,15 @@ for sheet_name in sheet_names:
             if idx_codigo_UC < idx_horas_UC:
                 ncols = idx_horas_UC - idx_codigo_UC + 1 
                 c.value=f"=VLOOKUP({letter_codigo}{i*N_docentes+2},'{UC}'!{letter_codigo_UC}:{letter_horas_UC}, {ncols}, FALSE)" 
+                c.fill=fill_updated
             else:
                 ncols =  idx_codigo_UC - idx_horas_UC + 1 
                 c.value=f"=VLOOKUP({letter_codigo}{i*N_docentes+2},'{UC}'!{letter_horas_UC}:{letter_codigo_UC}, {ncols}, FALSE)" 
+                c.fill=fill_updated
             # célula onde está o número de horas em falta
             c=new_worksheet.cell(column=idx_horas,row=(i+1)*N_docentes)
-            c.value=f"={letter_horas}{i*N_docentes+2}-SUM({letter_horas}{i*N_docentes+3}:{letter_horas}{(i+1)*N_docentes-1})"
+            c.value=f"={letter_horas}{i*N_docentes+2}-SUMIF({letter_docente}{i*N_docentes+3}:{letter_docente}{(i+1)*N_docentes-1},\"<>\",{letter_horas}{i*N_docentes+3}:{letter_horas}{(i+1)*N_docentes-1})"
+            c.fill=fill_updated
         # com VLOOKUP ir buscar o nome do responsável à folha UC, coluna UC_resp e colocar na 2a célula do docente, em DSD_resp
         idx_docente,letter_docente=get_letter_from_column_name(df_dsd,DSD_resp)
         idx_codigo,letter_codigo=get_letter_from_column_name(df_dsd,UC_codigo)
@@ -333,9 +347,11 @@ for sheet_name in sheet_names:
             if idx_codigo_UC < idx_resp_UC:
                 ncols = idx_resp_UC - idx_codigo_UC + 1 
                 c.value=f"=VLOOKUP({letter_codigo}{i*N_docentes+2},'{UC}'!{letter_codigo_UC}:{letter_resp_UC}, {ncols}, FALSE)" 
+                c.fill=fill_updated
             else:
                 ncols =  idx_codigo_UC - idx_resp_UC + 1 
                 c.value=f"=VLOOKUP({letter_codigo}{i*N_docentes+2},'{UC}'!{letter_resp_UC}:{letter_codigo_UC}, {ncols}, FALSE)" 
+                c.fill=fill_updated
 
     if sheet_name==UC and UNPROTECT_OUTPUT_CELLS:
         idx,letter=get_letter_from_column_name(df,UC_horas_totais_sugeridas)
@@ -354,7 +370,16 @@ for sheet_name in sheet_names:
             # célula onde vai estar a diferença
             c=new_worksheet.cell(column=idx_horas_UC_dif,row=i+2)
             c.value=f"={letter_horas_UC_sug}{i+2}-{letter_horas_UC}{i+2}"  
-
+            c.fill=fill_updated
+        # identificar alteração de responsável
+        idx_resp_cc_UC,letter_resp_cc_UC=get_letter_from_column_name(df_uc,UC_resp_cc)
+        idx_resp_UC,letter_resp_UC=get_letter_from_column_name(df_uc,UC_resp)
+        idx_mudanca_UC,letter_mudanca_UC=get_letter_from_column_name(df_uc,UC_mudanca_resp)
+        for i in range(N_ucs):
+            # célula onde vai estar a indicação da mudança
+            c=new_worksheet.cell(column=idx_mudanca_UC,row=i+2)
+            c.value=f"=IF({letter_resp_cc_UC}{i+2}<>{letter_resp_UC}{i+2},\"alterado\",\"---\")"  
+            c.fill=fill_updated
     
     # Dar possibilidade de criar novos docentes
     if sheet_name==RH and UNPROTECT_OUTPUT_CELLS:
@@ -374,8 +399,10 @@ for sheet_name in sheet_names:
         for i in range(N_rh+N_extra_nomes+1):
             c=new_worksheet.cell(column=idx_horas,row=i+2)
             c.value=f"=SUMIF('{DSD}'!{letter_docente}:{letter_docente},'{RH}'!{letter_nome}{i+2},'{DSD}'!{letter_horas_DSD}:{letter_horas_DSD})"
+            c.fill=fill_updated
             c=new_worksheet.cell(column=idx_horas_semana,row=i+2)
             c.value=f"=ROUND({letter_horas}{i+2}/28,2)"
+            c.fill=fill_updated
         
     if PROTECT_WORKSHEET:
         new_worksheet.protection.sheet = True
