@@ -43,6 +43,7 @@ FOLDER_OUTPUT='output_files'
 FOLDER_FICH_RESPONSAVEIS_UCs='ficheiros_responsaveis_ucs'
 FOLDER_2425='DSD_2024_2025'
 FOLDER_2324='DSD_2023_2024'
+FN_externo='DSD_2023_2024_servico_externo_v6_revisto_TF_DSD_28junho.xlsx'
 FN_responsaveis='DSD_2024_2025_responsaveis_UCs_fechado_12_mar_2024_desprotegido_ML_15MAR2024_corr_SIG2ciclo.xlsx'
 FN_resumo='resumo_DSD_2324_feito_em_fev_2024.xlsx'
 
@@ -54,6 +55,7 @@ DSD_OUTPUT_FICH='DSD_2024_2025_v'+str(number_files+1)+'.xlsx'
 # main files
 fn_resp= working_dir / FOLDER_2425 / FOLDER_FICH_RESPONSAVEIS_UCs / FN_responsaveis
 fn_resumo= working_dir / FOLDER_2324 / FN_resumo
+fn_externo= working_dir / FOLDER_2324 / FN_externo
 fn_output = folder_output / DSD_OUTPUT_FICH
 
 # worksheets (upper case) and column names (lower case) from fn_resp
@@ -94,6 +96,7 @@ RH_data_fim='data_fim'
 RH_posicao='posicao'
 RH_obs = 'Obs'
 RH_horas='total horas'
+RH_horas_ext='total horas externas'
 RH_horas_semana='horas por semana'
 RH_autor_sugestao='autor da sugestão'
 RHPOSICAO='RH_posicao' # drop
@@ -106,6 +109,9 @@ UCAREA='uc_AreaCient' # drop
 CODCURSO='cod_curso'
 CODCURSO_cod_curso='cod_curso'
 CODCURSO_sigla='siglaCurso'
+EXT='Servico_externo'
+EXT_docente='Nome do docente'
+EXT_horas='Número horas letivas'
 
 # sheet from fn_resumo
 HORASUCS='horas_UCs'
@@ -119,8 +125,9 @@ RH_nome_pro_bono='docente_PRO_BONO'
 RH_nome_em_contratacao='Docente em contratação'
 RH_data_fim_sem_termo='sem termo'
 DATA_TERMO_CERTO='2024-09-01'
-N_extra_nomes=0
+N_extra_nomes=0 # docentes adicionais a poder criar em RH
 N_docentes=18
+N_ext_plus=30 # linhas adicionais a poder criar em serviço externo
 
 # desproteger células:
 # responsável
@@ -136,7 +143,38 @@ CC = {'CC_cod_cu': 'cod_curso', 'CC_grau': 'grau', 'CC_curso': 'curso', 'CC_obs'
 RH = {'RH_num_pe': 'num_pessoal', 'RH_nome': 'nome', 'RH_corpo': 'corpo', 'RH_posica': 'posicao', 'RH_ETI': 'ETI', 'RH_contra': 'contratacao_vinculo', 'RH_data_f': 'data_fim', 'RH_Obs': 'Obs'}
 RH_meta = {'RH_meta_num_pe': 'num_pessoal', 'RH_meta_número': 'número de indentificação pessoal atribuído pelos RH', 'RH_meta_Unname': 'Unnamed: 4'}
 POS = {'POS_posica': 'posicao', 'POS_h_min': 'h_min', 'POS_h_max': 'h_max', 'POS_obs': 'obs'}
-''' 
+'''
+# colunas relevantes EXT:
+col_EXT=[EXT_docente,'Nome da UC', 'Nome do curso', 'Nível',
+       'Semestre de funcionamento', 'Parceria institucional estabelecida',
+       'Com centro de custos ISA ou de empresas do ISA', 'Ocorrência',
+       'Instituição responsável', 'Link do curso', 'Responsável do Curso',
+       'Responsável de UC', 'Email responsável UC', 'Funcionamento',
+       'Funciona dependente do nº alunos',
+       'Número mínimo de alunos para funcionar', 'Número horas letivas',
+       'observação']
+
+####################################### dados para validação EXT
+SN=['Sim','Não']
+mydict={EXT_docente: None,
+         'Nome da UC': None,
+         'Nome do curso': None,
+         'Nível': ['1º ciclo','2º ciclo','3º ciclo','Não conferente de grau'],
+         'Semestre de funcionamento': ['1º','2º','extra-semestre'],
+         'Parceria institucional estabelecida': SN,
+         'Com centro de custos ISA ou de empresas do ISA': SN,
+         'Ocorrência': ['Todos os anos', 'Não regular'],
+         'Instituição responsável': None,
+         'Link do curso': None,
+         'Responsável do Curso': None,
+         'Responsável de UC': None,
+         'Email responsável UC': None,
+         'Funcionamento': ['obrigatória','optativa'],
+         'Funciona dependente do nº alunos': SN,
+         'Número mínimo de alunos para funcionar': None,
+         'Número horas letivas':None
+}
+####################################
 
 # cor light red, light yellow
 fill_red = PatternFill(start_color="FFC0CB", end_color="FFC0CB", fill_type="solid")
@@ -151,6 +189,7 @@ thin_border=Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(s
 # read sheet names
 sheets_resp = pd.ExcelFile(fn_resp).sheet_names
 sheets_resumo = pd.ExcelFile(fn_resumo).sheet_names
+sheets_externo = pd.ExcelFile(fn_externo).sheet_names
 
 # read data from inputs
 #RH
@@ -160,6 +199,7 @@ N_rh=df_rh.shape[0]
 for i in range(N_extra_nomes):
     df_rh=insert_row_at_end(df_rh,{RH_nome: 'indicar nome '+str(i+1), RH_posicao:'indicar se possível', RH_obs: 'nomes em falta na lista: NÃO SÃO contratações' })
 df_rh[RH_horas]=''
+df_rh[RH_horas_ext]=''
 df_rh[RH_horas_semana]=''
 df_rh_meta = pd.read_excel(fn_resp, sheet_name=RHMETA,header=None)
 df_rh_meta.columns=['coluna','descricao','descricao_2','descricao_3','descricao_4']
@@ -203,6 +243,20 @@ df_uc=df_uc[[UC_ciclo_curso, UC_obrigatoria,UC_optativa, UC_codigo, 'uc_interna'
              'h_trab_totais', 'T', 'TP','PL', 'TC', 'S', 'E', 'OT', 'O',
              UC_horas_contacto, UC_horas_totais, UC_horas_totais_sugeridas,UC_dif_horas,UC_horas_justif,'obs',  
              UC_autor_sugestao, UC_sugestoes,UC_resp_cc,UC_resp,UC_mudanca_resp, UC_resp_justif]]
+
+# EXTERNO
+df_ext = pd.read_excel(fn_externo, sheet_name=EXT)
+df_ext=df_ext[col_EXT]
+L=list(df_rh[RH_nome])
+df_ext=reorder_and_filter_dataframe(df_ext, EXT_docente, L)
+N_ext=df_ext.shape[0]
+# renomear
+df_ext = df_ext.rename(columns={'Número horas letivas': 'Número horas letivas 2022_2023'})
+# trocar colunas
+col_EXT=list(set(df_ext.columns)-set(['observação','Número horas letivas 2022_2023']))+['observação','Número horas letivas 2022_2023']
+df_ext=df_ext[col_EXT]
+df_ext[EXT_horas]=0
+col_EXT=df_ext.columns
 
 # main dataframe for DSD
 # select columns to be shown: os nomes das colunas de DSD e de UC são iguais nesta altura
@@ -248,9 +302,9 @@ df_rh_meta=insert_row_at_end(df_rh_meta, {'coluna':RH_horas_semana, 'descricao':
 
 ############################################################################## converter dataframes em sheets
 new_workbook = Workbook()
-sheet_names=[DSD,UC,UCMETA,RH,RHMETA,CODCURSO]
+sheet_names=[DSD,UC,UCMETA,RH,RHMETA,EXT,CODCURSO]
 for sheet_name in sheet_names:
-    # for each sheet_name, we copy the contents of the input sheet, create a df, modify df, create validation, and write to workbook with df_to_excel_with_columns
+    # for each sheet_name, 1) create worksheet; 2) create validation; 3)  df_to_excel_with_columns; 4) stripe_cells; 5) unlock_cells
     print(sheet_name) 
     # visit all sheets
     if sheet_name==DSD: df=df_dsd.copy()
@@ -258,12 +312,13 @@ for sheet_name in sheet_names:
     if sheet_name==UCMETA: df=df_uc_meta.copy()
     if sheet_name==RH: df=df_rh.copy()
     if sheet_name==RHMETA: df=df_rh_meta.copy()
+    if sheet_name==EXT: df=df_ext.copy()
     if sheet_name==CODCURSO: df=df_cod_curso.copy()
 
     # Create a new sheet in the new workbook
     new_worksheet = new_workbook.create_sheet(title=sheet_name)
     
-    if sheet_name==DSD or sheet_name==UC: 
+    if sheet_name==DSD or sheet_name==UC or sheet_name==EXT: 
         # add datavalidation to worksheet
         idx,letter=get_letter_from_column_name(df_rh,RH_nome)
         # dv_resp inclui o 1o valor de 'Coordenação externa ao ISA'
@@ -286,9 +341,25 @@ for sheet_name in sheet_names:
     if sheet_name==UC: 
         idx,letter=get_letter_from_column_name(df_uc,UC_resp)
         dv_resp.add(f"${letter}$2:{letter}${N_ucs+1}") # creates drop-down menu.
+    
+    # validação EXT
+    if sheet_name==EXT: 
+        idx,letter=get_letter_from_column_name(df_ext,EXT_docente)
+        dv_docente_nao_pro_bono.add(f"${letter}$2:{letter}${N_ext+N_ext_plus+1}") # creates drop-down menu.
+        # outras colunas com validação (listas)
+        for key, value in mydict.items(): # key é o nome da coluna, value é a lista para validação
+            if value is not None:
+                #print(key,value)
+                idx,letter=get_letter_from_column_name(df_ext,key)
+                dv = DataValidation(type="list", formula1='"' + ','.join(value) + '"')
+                new_worksheet.add_data_validation(dv)
+                dv.add(f"${letter}$2:{letter}${N_ext+N_ext_plus+1}") # creates drop-down menu.
 
     # Write the DataFrame to the new workbook: determines max width of columns
-    df_to_excel_with_columns(df,new_worksheet,maxwidth=30,header=True,index=False,startrow=0, startcol=0)
+    if sheet_name==EXT:
+        df_to_excel_with_columns(df,new_worksheet,maxwidth=15,header=True,index=False,startrow=0, startcol=0)
+    else:
+        df_to_excel_with_columns(df,new_worksheet,maxwidth=30,header=True,index=False,startrow=0, startcol=0)
 
     # Apply filters to the first row
     if '_meta' not in sheet_name:
@@ -381,6 +452,17 @@ for sheet_name in sheet_names:
             c.value=f"=IF({letter_resp_cc_UC}{i+2}<>{letter_resp_UC}{i+2},\"alterado\",\"---\")"  
             c.fill=fill_updated
     
+    # EXT: criar linhas para mais serviço externo
+    if sheet_name==EXT and UNPROTECT_OUTPUT_CELLS:
+        stripe_cells(new_worksheet, fill_color=fill_light_yellow,border=thin_border)
+        # desproteger linhas para novos docentes
+        for col in col_EXT:
+            idx,letter=get_letter_from_column_name(df_ext,col)
+            unlock_cells(new_worksheet,letter, min_row=+2, max_row=N_ext+N_ext_plus+1, fill_color=fill_green,border=thin_border)
+        # change row height
+        #for k in range(N_ext+N_ext_plus+1):
+        #    new_worksheet.row_dimensions[k+1].height = 25 # mudar altura da linha
+    
     # Dar possibilidade de criar novos docentes
     if sheet_name==RH and UNPROTECT_OUTPUT_CELLS:
         stripe_cells(new_worksheet, fill_color=fill_light_yellow,border=thin_border)
@@ -391,19 +473,27 @@ for sheet_name in sheet_names:
         unlock_cells(new_worksheet,letter, min_row=N_rh+2, max_row=N_rh+N_extra_nomes+1, fill_color=fill_green,border=thin_border)
         idx,letter=get_letter_from_column_name(df,RH_obs)
         unlock_cells(new_worksheet,letter, min_row=N_rh+2, max_row=N_rh+N_extra_nomes+1, fill_color=fill_green,border=thin_border)
+        # criar validação
         idx_nome,letter_nome=get_letter_from_column_name(df_rh,RH_nome)
         idx_horas,letter_horas=get_letter_from_column_name(df_rh,RH_horas)
+        idx_horas_ext,letter_horas_ext=get_letter_from_column_name(df_rh,RH_horas_ext)
         idx_horas_semana,letter_horas_semana=get_letter_from_column_name(df_rh,RH_horas_semana)
         idx_docente,letter_docente=get_letter_from_column_name(df_dsd,DSD_resp)
+        idx_docente_EXT,letter_docente_EXT=get_letter_from_column_name(df_ext,EXT_docente)
         idx_horas_DSD,letter_horas_DSD=get_letter_from_column_name(df_dsd,DSD_horas_docente)
+        idx_horas_EXT,letter_horas_EXT=get_letter_from_column_name(df_ext,EXT_horas)
         for i in range(N_rh+N_extra_nomes+1):
             c=new_worksheet.cell(column=idx_horas,row=i+2)
             c.value=f"=SUMIF('{DSD}'!{letter_docente}:{letter_docente},'{RH}'!{letter_nome}{i+2},'{DSD}'!{letter_horas_DSD}:{letter_horas_DSD})"
             c.fill=fill_updated
-            c=new_worksheet.cell(column=idx_horas_semana,row=i+2)
-            c.value=f"=ROUND({letter_horas}{i+2}/28,2)"
+            c=new_worksheet.cell(column=idx_horas_ext,row=i+2)
+            c.value=f"=SUMIF('{EXT}'!{letter_docente_EXT}:{letter_docente_EXT},'{RH}'!{letter_nome}{i+2},'{EXT}'!{letter_horas_EXT}:{letter_horas_EXT})"
             c.fill=fill_updated
-        
+            c=new_worksheet.cell(column=idx_horas_semana,row=i+2)
+            c.value=f"=ROUND(({letter_horas}{i+2}+{letter_horas_ext}{i+2})/28,2)"
+            c.fill=fill_updated
+
+    ############################################## protect worksheet
     if PROTECT_WORKSHEET:
         new_worksheet.protection.sheet = True
         new_worksheet.protection.enable()

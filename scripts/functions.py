@@ -132,17 +132,6 @@ def df_to_excel(df, ws, header=True, index=True, startrow=0, startcol=0):
         for c_idx, value in enumerate(row, startcol + 1):
              ws.cell(row=r_idx, column=c_idx).value = value
 
-def df_to_excel_with_columns(df,ws,maxwidth=30,header=True,index=False):
-    for column in df.columns:
-        # get the column letter
-        column_letter = get_column_letter(df.columns.get_loc(column) + 1)
-        # determine the optimal width based on the contents of the column
-        max_length = df[column].astype(str).map(len).max()
-        width = max(len(column)-2,min(max_length+2, maxwidth)) # set a maximum width of 30
-        # set the column width
-        ws.column_dimensions[column_letter].width = width
-        # write 
-        df_to_excel(df,ws,header=True,index=False)
 
 # devolve letra da coluna com nome (1a linha) da worksheet ws
 def nomeColuna2letter(ws,nome):
@@ -577,6 +566,7 @@ def df_to_excel_with_columns(df,ws,maxwidth=30,header=True,index=False,startrow=
         # determine the optimal width based on the contents of the column
         max_length = df[column].astype(str).map(len).max()
         width = max(len(column)-2,min(max_length+2, maxwidth)) # set a maximum width of 30
+        width = max(min(len(column)-2,maxwidth),min(max_length+2, maxwidth)) # set a maximum width of 30
         # set the column width
         ws.column_dimensions[column_letter].width = width
         # write 
