@@ -74,12 +74,12 @@ UC_sugestoes='sugestões de modificação da info da UC'
 UC_autor_sugestao='autor da sugestão'
 UC_ciclo_curso = 'ciclo_curso'
 UC_horas_contacto = 'h_contacto_total'
-UC_ano='ano'
-UC_sem='sem'
-UC_horas_totais='horas totais'
-UC_horas_totais_sugeridas='horas totais revistas'
+UC_ano='ano' ##
+UC_sem='sem' ##
+UC_horas_totais='horas indicativas'
+UC_horas_totais_sugeridas='horas 2024 2025'
 UC_dif_horas='diferença horas'
-UC_horas_justif='justificação horas totais'
+UC_horas_justif='justificação alteração horas'
 # as outras colunas vem de UC:
 DSD='DSD_2024-25'
 DSD_horas_totais='horas totais UC'
@@ -112,6 +112,9 @@ CODCURSO_sigla='siglaCurso'
 EXT='Servico_externo'
 EXT_docente='Nome do docente'
 EXT_horas='Número horas letivas'
+EXT_obs='Observação'
+EXT_obs_202223='observação 2022_2023'
+EXT_horas_202223='Número horas indicativas 2022_2023'
 
 # sheet from fn_resumo
 HORASUCS='horas_UCs'
@@ -126,7 +129,7 @@ RH_nome_em_contratacao='Docente em contratação'
 RH_data_fim_sem_termo='sem termo'
 DATA_TERMO_CERTO='2024-09-01'
 N_extra_nomes=0 # docentes adicionais a poder criar em RH
-N_docentes=18
+N_docentes=18 # inclui 3 linhas adicionais em DSD
 N_ext_plus=30 # linhas adicionais a poder criar em serviço externo
 
 # desproteger células:
@@ -151,8 +154,8 @@ col_EXT=[EXT_docente,'Nome da UC', 'Nome do curso', 'Nível',
        'Instituição responsável', 'Link do curso', 'Responsável do Curso',
        'Responsável de UC', 'Email responsável UC', 'Funcionamento',
        'Funciona dependente do nº alunos',
-       'Número mínimo de alunos para funcionar', 'Número horas letivas',
-       'observação']
+       'Número mínimo de alunos para funcionar', 
+       'observação','Número horas letivas']
 
 ####################################### dados para validação EXT
 SN=['Sim','Não']
@@ -174,6 +177,8 @@ mydict={EXT_docente: None,
          'Número mínimo de alunos para funcionar': None,
          'Número horas letivas':None
 }
+
+
 ####################################
 
 # cor light red, light yellow
@@ -252,11 +257,21 @@ df_ext=reorder_and_filter_dataframe(df_ext, EXT_docente, L)
 N_ext=df_ext.shape[0]
 # renomear
 df_ext = df_ext.rename(columns={'Número horas letivas': 'Número horas letivas 2022_2023'})
+df_ext = df_ext.rename(columns={'observação': EXT_obs_202223})
+df_ext = df_ext.rename(columns={EXT_docente: 'aux'}) # para trocar de posição
 # trocar colunas
-col_EXT=list(set(df_ext.columns)-set(['observação','Número horas letivas 2022_2023']))+['observação','Número horas letivas 2022_2023']
-df_ext=df_ext[col_EXT]
+#col_EXT=list(set(df_ext.columns)-set(['observação','Número horas letivas 2022_2023',EXT_docente]))+['observação',EXT_docente,'Número horas letivas 2022_2023']
+#df_ext=df_ext[col_EXT]
+df_ext[EXT_docente]=df_ext['aux']
 df_ext[EXT_horas]=0
+df_ext[EXT_obs]=''
+df_ext.drop(columns=['aux'],inplace=True)
+df_ext.drop(columns=[EXT_obs_202223],inplace=True) # retirar observações 2022-2023
 col_EXT=df_ext.columns
+col_EXT_nao_desproteger=['Nome da UC', 'Nome do curso', 'Nível',
+       'Semestre de funcionamento', 'Parceria institucional estabelecida',
+       'Com centro de custos ISA ou de empresas do ISA', 'Ocorrência',
+       'Instituição responsável', 'Link do curso',EXT_obs_202223,EXT_horas_202223] # se col in estas colunas então col não é desprotegida
 
 # main dataframe for DSD
 # select columns to be shown: os nomes das colunas de DSD e de UC são iguais nesta altura
@@ -364,9 +379,13 @@ for sheet_name in sheet_names:
     # Apply filters to the first row
     if '_meta' not in sheet_name:
         new_worksheet.auto_filter.ref = new_worksheet.dimensions
-        if sheet_name==UC:
-            idx,letter=get_next_letter_from_column_name(df_uc,UC_uc)
-            new_worksheet.freeze_panes = f"{letter}{2}"
+        if sheet_name==UC or sheet_name==EXT:
+            if sheet_name==UC:
+                idx,letter=get_next_letter_from_column_name(df_uc,UC_uc)
+                new_worksheet.freeze_panes = f"{letter}{2}"
+            if sheet_name==EXT:
+                idx,letter=get_next_letter_from_column_name(df_ext,'Nome do curso')
+                new_worksheet.freeze_panes = f"{letter}{2}"
         else:
             new_worksheet.freeze_panes = "A2"
     # stripes
@@ -456,14 +475,17 @@ for sheet_name in sheet_names:
     if sheet_name==EXT and UNPROTECT_OUTPUT_CELLS:
         stripe_cells(new_worksheet, fill_color=fill_light_yellow,border=thin_border)
         # desproteger linhas para novos docentes
-        for col in col_EXT:
+        for col in list(set(col_EXT)-set(col_EXT_nao_desproteger)):
             idx,letter=get_letter_from_column_name(df_ext,col)
             unlock_cells(new_worksheet,letter, min_row=+2, max_row=N_ext+N_ext_plus+1, fill_color=fill_green,border=thin_border)
+        for col in list(set(col_EXT)-set([EXT_horas_202223])):
+            idx,letter=get_letter_from_column_name(df_ext,col)
+            unlock_cells(new_worksheet,letter, min_row=N_ext+2, max_row=N_ext+N_ext_plus+1, fill_color=fill_green,border=thin_border)
         # change row height
-        #for k in range(N_ext+N_ext_plus+1):
+        # for k in range(N_ext+N_ext_plus+1):
         #    new_worksheet.row_dimensions[k+1].height = 25 # mudar altura da linha
     
-    # Dar possibilidade de criar novos docentes
+    # RH: poder criar novos docentes (se N_extra_nomes>0) e calcular com VLOOKUP as somas de horas de cada docente
     if sheet_name==RH and UNPROTECT_OUTPUT_CELLS:
         stripe_cells(new_worksheet, fill_color=fill_light_yellow,border=thin_border)
         # docentes extra (a poderem ser adicionados)
@@ -473,7 +495,7 @@ for sheet_name in sheet_names:
         unlock_cells(new_worksheet,letter, min_row=N_rh+2, max_row=N_rh+N_extra_nomes+1, fill_color=fill_green,border=thin_border)
         idx,letter=get_letter_from_column_name(df,RH_obs)
         unlock_cells(new_worksheet,letter, min_row=N_rh+2, max_row=N_rh+N_extra_nomes+1, fill_color=fill_green,border=thin_border)
-        # criar validação
+        # criar validação e cálculo do número de horas totais do docente
         idx_nome,letter_nome=get_letter_from_column_name(df_rh,RH_nome)
         idx_horas,letter_horas=get_letter_from_column_name(df_rh,RH_horas)
         idx_horas_ext,letter_horas_ext=get_letter_from_column_name(df_rh,RH_horas_ext)
