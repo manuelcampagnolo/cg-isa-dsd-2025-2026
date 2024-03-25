@@ -44,7 +44,8 @@ FOLDER_FICH_RESPONSAVEIS_UCs='ficheiros_responsaveis_ucs'
 FOLDER_2425='DSD_2024_2025'
 FOLDER_2324='DSD_2023_2024'
 FN_externo='DSD_2023_2024_servico_externo_v6_revisto_TF_DSD_28junho.xlsx'
-FN_responsaveis='DSD_2024_2025_responsaveis_UCs_fechado_12_mar_2024_desprotegido_ML_15MAR2024_corr_SIG2ciclo.xlsx'
+#FN_responsaveis='DSD_2024_2025_responsaveis_UCs_fechado_12_mar_2024_desprotegido_ML_15MAR2024_corr_SIG2ciclo.xlsx'
+FN_responsaveis='DSD_2024_2025_responsaveis_UCs_fechado_12_mar_2024_desprotegido_ML_15MAR2024_corr_SIG2ciclo_sugestoes_TF_25MAR2024.xlsx'
 FN_resumo='resumo_DSD_2324_feito_em_fev_2024.xlsx'
 
 # list files in FOLDER_OUTPUT and create name of output file
@@ -86,7 +87,7 @@ DSD_horas_totais='horas totais UC'
 DSD_horas_docente='horas docente'
 DSD_resp='docente                '
 DSD_obs='observação              '
-DSD_autor='autor da observação'
+#DSD_autor='autor da observação' # nova
 #
 UCMETA='uc_meta'
 RH='RH'
@@ -256,7 +257,7 @@ L=list(df_rh[RH_nome])
 df_ext=reorder_and_filter_dataframe(df_ext, EXT_docente, L)
 N_ext=df_ext.shape[0]
 # renomear
-df_ext = df_ext.rename(columns={'Número horas letivas': 'Número horas letivas 2022_2023'})
+df_ext = df_ext.rename(columns={'Número horas letivas': EXT_horas_202223})
 df_ext = df_ext.rename(columns={'observação': EXT_obs_202223})
 df_ext = df_ext.rename(columns={EXT_docente: 'aux'}) # para trocar de posição
 # trocar colunas
@@ -279,7 +280,7 @@ df_dsd=df_uc[[UC_ciclo_curso,UC_codigo,UC_ano, UC_sem,UC_uc,UC_resp]]
 df_dsd = df_dsd.rename(columns={UC_resp: DSD_resp})
 #df_dsd[DSD_horas_totais]=''
 df_dsd[DSD_horas_docente]=0
-df_dsd[DSD_autor]=''
+#df_dsd[DSD_autor]=''
 df_dsd[DSD_obs]=''
 df_dsd=df_dsd.fillna('')
 # duplicar linhas N_docentes vezes
@@ -348,10 +349,10 @@ for sheet_name in sheet_names:
     # validação docente e autor observação em DSD
     if sheet_name==DSD: 
         idx_docente,letter_docente=get_letter_from_column_name(df_dsd,DSD_resp) # é onde se coloca o nome do docente
-        idx_autor,letter_autor=get_letter_from_column_name(df_dsd,DSD_autor)
+        #idx_autor,letter_autor=get_letter_from_column_name(df_dsd,DSD_autor)
         for i in range(N_ucs):
             dv_docente.add(f"${letter_docente}${i*N_docentes+4}:{letter_docente}${(i+1)*N_docentes-1}") # creates drop-down menu.
-            dv_docente_nao_pro_bono.add(f"${letter_autor}${i*N_docentes+2}:{letter_autor}${(i+1)*N_docentes-1}") # creates drop-down menu.
+            #dv_docente_nao_pro_bono.add(f"${letter_autor}${i*N_docentes+2}:{letter_autor}${(i+1)*N_docentes-1}") # creates drop-down menu.
     # validation autor_sugestao
     if sheet_name==UC: 
         idx,letter=get_letter_from_column_name(df_uc,UC_resp)
@@ -399,11 +400,11 @@ for sheet_name in sheet_names:
             unlock_cells(new_worksheet,letter,min_row=i*N_docentes+3,max_row=(i+1)*N_docentes-1,fill_color=fill_green,border=thin_border)
         # desbloquear os nomes dos docentes, observaçoes e autores
         idx_docente,letter_docente=get_letter_from_column_name(df,DSD_resp)
-        idx_autor,letter_autor=get_letter_from_column_name(df,DSD_autor)
+        #idx_autor,letter_autor=get_letter_from_column_name(df,DSD_autor)
         idx_obs,letter_obs=get_letter_from_column_name(df,DSD_obs)
         for i in range(N_ucs):
             unlock_cells(new_worksheet,letter_docente,min_row=i*N_docentes+4,max_row=(i+1)*N_docentes-1,fill_color=fill_green,border=thin_border)
-            unlock_cells(new_worksheet,letter_autor,min_row=i*N_docentes+2,max_row=(i+1)*N_docentes-1,fill_color=fill_green,border=thin_border)
+            #unlock_cells(new_worksheet,letter_autor,min_row=i*N_docentes+2,max_row=(i+1)*N_docentes-1,fill_color=fill_green,border=thin_border)
             unlock_cells(new_worksheet,letter_obs,min_row=i*N_docentes+2,max_row=(i+1)*N_docentes-1,fill_color=fill_green,border=thin_border)
         # células para número de horas docência (VLOOKUP)
         idx_docente,letter_docente=get_letter_from_column_name(df_dsd,DSD_resp)
