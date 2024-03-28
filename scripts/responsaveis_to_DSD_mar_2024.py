@@ -180,7 +180,6 @@ mydict={EXT_docente: None,
          'Número horas letivas':None
 }
 
-
 ####################################
 
 # cor light red, light yellow
