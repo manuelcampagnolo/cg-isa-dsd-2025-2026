@@ -96,9 +96,10 @@ RH_numero = 'num_pessoal'
 RH_data_fim='data_fim'
 RH_posicao='posicao'
 RH_obs = 'Obs'
-RH_horas='total horas'
+RH_horas='total horas internas'
 RH_horas_ext='total horas externas'
 RH_horas_semana='horas por semana'
+RH_horas_cncg='total horas CNCG'
 RH_autor_sugestao='autor da sugestão'
 RHPOSICAO='RH_posicao' # drop
 RHMETA='RH_meta'
@@ -131,7 +132,7 @@ RH_data_fim_sem_termo='sem termo'
 DATA_TERMO_CERTO='2024-09-01'
 N_extra_nomes=0 # docentes adicionais a poder criar em RH
 N_docentes=18 # inclui 3 linhas adicionais em DSD
-N_ext_plus=30 # linhas adicionais a poder criar em serviço externo
+N_ext_plus=40 # linhas adicionais a poder criar em serviço externo
 
 # desproteger células:
 # responsável
@@ -207,6 +208,7 @@ for i in range(N_extra_nomes):
 df_rh[RH_horas]=''
 df_rh[RH_horas_ext]=''
 df_rh[RH_horas_semana]=''
+df_rh[RH_horas_cncg]=''
 df_rh_meta = pd.read_excel(fn_resp, sheet_name=RHMETA,header=None)
 df_rh_meta.columns=['coluna','descricao','descricao_2','descricao_3','descricao_4']
 # CODCURSO
@@ -223,6 +225,17 @@ del(HORASUCS_total_horas)
 df_uc = pd.read_excel(fn_resp, sheet_name=UC)
 df_uc[UC_codigo]=df_uc[UC_codigo].astype(str).str.strip()
 df_uc=df_uc.fillna('')
+N_ucs=df_uc.shape[0]
+# ordenar UCs: (A) 1o+2o+3ociclos; seguido de CNCG; (B) dentro de cada grupo, por ordem alfabética d enome de UC
+# re-ordenar UCs pelo nome, mas com cursos CNCG no fim
+UC_ciclo_curso_curso='curso' # para filtrar cncg's
+cncg=list(df_uc[df_uc[UC_ciclo_curso].str.contains(UC_ciclo_curso_curso, case=False, na=False)][UC_uc])
+cncg=sort_list(cncg, simplify_strings(cncg))
+N_ucs_cncg=len(cncg)
+uc_ciclos=list(set(list(df_uc[UC_uc])).difference(set(cncg)))
+uc_ciclos=sort_list(uc_ciclos, simplify_strings(uc_ciclos))
+N_ucs_ciclos=len(uc_ciclos)
+df_uc=reorder_and_filter_dataframe(df_uc, UC_uc, uc_ciclos+cncg)
 # adicionar código às UCs sem código: a probabilidade de 2 terem o mesmo código é muito baixa
 df_uc.loc[df_uc[UC_codigo].str.len()<4,UC_codigo]=df_uc.loc[df_uc[UC_codigo].str.len()<4,UC_codigo].apply(lambda x: 'cod'+str(random.randint(10000000, 99999999)))
 #print(df_uc[df_uc[UC_codigo].str.len()>7][UC_codigo])
@@ -285,7 +298,6 @@ df_dsd[DSD_obs]=''
 df_dsd=df_dsd.fillna('')
 # duplicar linhas N_docentes vezes
 IDXREP='idx_rep'
-N_ucs=df_dsd.shape[0]
 df_dsd=df_dsd.reindex(df_dsd.index.repeat(N_docentes)).reset_index(drop=True)
 # create indices: 0 corresponde à linha principal do UC; 1 é o docente que é o responsável; 2 a N-1 é para os restantes docentes
 series=[]
@@ -500,14 +512,23 @@ for sheet_name in sheet_names:
         idx_nome,letter_nome=get_letter_from_column_name(df_rh,RH_nome)
         idx_horas,letter_horas=get_letter_from_column_name(df_rh,RH_horas)
         idx_horas_ext,letter_horas_ext=get_letter_from_column_name(df_rh,RH_horas_ext)
+        idx_horas_cncg,letter_horas_cncg=get_letter_from_column_name(df_rh,RH_horas_cncg)
         idx_horas_semana,letter_horas_semana=get_letter_from_column_name(df_rh,RH_horas_semana)
         idx_docente,letter_docente=get_letter_from_column_name(df_dsd,DSD_resp)
         idx_docente_EXT,letter_docente_EXT=get_letter_from_column_name(df_ext,EXT_docente)
         idx_horas_DSD,letter_horas_DSD=get_letter_from_column_name(df_dsd,DSD_horas_docente)
         idx_horas_EXT,letter_horas_EXT=get_letter_from_column_name(df_ext,EXT_horas)
         for i in range(N_rh+N_extra_nomes+1):
+            # horas serviço interno (1o,2o,3o ciclos)
             c=new_worksheet.cell(column=idx_horas,row=i+2)
-            c.value=f"=SUMIF('{DSD}'!{letter_docente}:{letter_docente},'{RH}'!{letter_nome}{i+2},'{DSD}'!{letter_horas_DSD}:{letter_horas_DSD})"
+            # escolher apenas range dos 1o,2o,3o ciclos
+            # c.value=f"=SUMIF('{DSD}'!{letter_docente}:{letter_docente},'{RH}'!{letter_nome}{i+2},'{DSD}'!{letter_horas_DSD}:{letter_horas_DSD})"
+            c.value=f"=SUMIF('{DSD}'!{letter_docente}2:{letter_docente}{N_ucs_ciclos*N_docentes},'{RH}'!{letter_nome}{i+2},'{DSD}'!{letter_horas_DSD}2:{letter_horas_DSD}{N_ucs_ciclos*N_docentes})"
+            c.fill=fill_updated
+            # horas cncg
+            c=new_worksheet.cell(column=idx_horas_cncg,row=i+2)
+            # escolher apenas range cncg em DSD
+            c.value=f"=SUMIF('{DSD}'!{letter_docente}{N_ucs_ciclos*N_docentes+2}:{letter_docente}{N_ucs*N_docentes+1},'{RH}'!{letter_nome}{i+2},'{DSD}'!{letter_horas_DSD}{N_ucs_ciclos*N_docentes+2}:{letter_horas_DSD}{N_ucs*N_docentes+1})"
             c.fill=fill_updated
             c=new_worksheet.cell(column=idx_horas_ext,row=i+2)
             c.value=f"=SUMIF('{EXT}'!{letter_docente_EXT}:{letter_docente_EXT},'{RH}'!{letter_nome}{i+2},'{EXT}'!{letter_horas_EXT}:{letter_horas_EXT})"
