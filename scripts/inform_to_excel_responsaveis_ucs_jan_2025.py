@@ -27,14 +27,14 @@ PROTECT_WORKSHEET=True # tem que ser True para impedir escrita
 PASSWORD='kathleen'
 
 # input DSD file
-FOLDER_SERVICOS= 'ficheiros_servicos_ISA'
+FOLDER_SERVICOS= 'ficheiros_servicos_ISA' #'ficheiros_servicos_ISA'
 FOLDER_OUTPUT='output_files'
 FOLDER_FICH_RESPONSAVEIS_UCs='ficheiros_responsaveis_ucs'
 FORCE_OUTPUT_NAME=True # para forçar nome do output; caso contrário, é derivado do nome do ficheiro de input
-DSD_OUTPUT_FICH='DSD_2024_2025_responsaveis_UCs.xlsx' # if FORCE_OUTPUT_NAME
+DSD_OUTPUT_FICH='DSD_2025_2026_responsaveis_UCs.xlsx' # if FORCE_OUTPUT_NAME
 #DSD_INPUT_FICH='DSD_inform_2024_2025_v5.xlsx'
 #DSD_INPUT_FICH='2024_01_26 DSD_inform_202324_v6-1-1.xlsx (Dados MCaron e Carlos).xlsx'
-DSD_INPUT_FICH='2024_01_26 DSD_inform_202324_v6-1-1.xlsx (Dados MCaron e Carlos)_compact_ML3.xlsx'
+DSD_INPUT_FICH='info_servicos_jan_2025.xlsx' #'2024_01_26 DSD_inform_202324_v6-1-1.xlsx (Dados MCaron e Carlos)_compact_ML3.xlsx'
 stem=Path(DSD_INPUT_FICH).stem
 suffix=Path(DSD_INPUT_FICH).suffix
 COMPACT='_compact'
@@ -48,26 +48,29 @@ except:
     working_dir=Path().absolute()
 
 
-input_folder= working_dir / 'DSD_2024_2025' / FOLDER_SERVICOS
-output_folder= working_dir / 'DSD_2024_2025' / FOLDER_OUTPUT
+input_folder= working_dir / 'DSD_2025_2026' / FOLDER_SERVICOS
+output_folder= working_dir / 'DSD_2025_2026' / FOLDER_OUTPUT
 compact_input_file= output_folder  / (stem+COMPACT+suffix)
 if FORCE_OUTPUT_NAME: 
     output_file=output_folder / DSD_OUTPUT_FICH
 else:
     output_file=output_folder / (stem+BLOQ+suffix)
 
-# worksheets and column names
-UC ='uc_2024-25'
-UC_uc = 'unidade_curricular'
+# worksheets and column names do ficheiro (único) dos serviços que já contém UCs e RHs para DSD 2024-2025
+# prefixo=são as folhas do excel dos serviços DSD_INPUT_FICH: UC, UCMETA, etc
+# sufixo _etc:= são as colunas que interessam da folha respetiva 
+UC ='listagem_UCs' #'uc_2024-25'
+UC_codigo='codigo_uc'
+UC_uc = 'nome_uc_pt' # 'unidade_curricular'
 UC_resp='responsavel_unidade_curricular'
 UC_sugestoes='sugestões de modificação da info da UC'
 UC_autor_sugestao='autor da sugestão'
-UC_area_cientifica='area_cient' # drop
-UC_numero_alunos='NumeroAlunos' # drop
+UC_area_cientifica='acd_uc' #'area_cient' # drop
+#UC_numero_alunos='NumeroAlunos' # drop
 UC_ciclo_curso= 'ciclo_curso'
 UC_ciclo_curso_curso='curso' # para filtrar cncg's
 UCMETA='uc_meta'
-RH='RH'
+RH='docentes_dez_2024'
 RH_nome='nome' # nomes docentes
 N_extra_nomes=0
 RH_numero = 'num_pessoal'
@@ -101,7 +104,7 @@ AC_meta = {'AC_meta_classi': 'classificacao_area', 'AC_meta_CNAEF': 'CNAEF', 'AC
 CC = {'CC_cod_cu': 'cod_curso', 'CC_grau': 'grau', 'CC_curso': 'curso', 'CC_obs': 'obs'}
 RH = {'RH_num_pe': 'num_pessoal', 'RH_nome': 'nome', 'RH_corpo': 'corpo', 'RH_posica': 'posicao', 'RH_ETI': 'ETI', 'RH_contra': 'contratacao_vinculo', 'RH_data_f': 'data_fim', 'RH_Obs': 'Obs'}
 RH_meta = {'RH_meta_num_pe': 'num_pessoal', 'RH_meta_número': 'número de indentificação pessoal atribuído pelos RH', 'RH_meta_Unname': 'Unnamed: 4'}
-POS = {'POS_posica': 'posicao', 'POS_h_min': 'h_min', 'POS_h_max': 'h_max', 'POS_obs': 'obs'}
+RH_posicao = {'POS_posica': 'posicao', 'POS_h_min': 'h_min', 'POS_h_max': 'h_max', 'POS_obs': 'obs'}
 ''' 
 
 # cor light red, light yellow
