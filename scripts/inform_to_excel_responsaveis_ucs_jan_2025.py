@@ -101,8 +101,9 @@ RN_contrato_convidado='Docente Convidado' # valor na colune 'contrato' 2025-2026
 RH_atrib_select=[RH_nome,RH_numero,RH_posicao,RH_grupo,RH_dept_doc,RH_seccao_doc, RH_obs,RH_data_termino]
 # values: Sheet_column_value
 RH_nome_pro_bono='docente_PRO_BONO' 
+RH_data_limite='data_limite'
 # RH_data_fim_sem_termo='sem termo'
-# DATA_TERMO_CERTO='2024-09-01'
+DATA_TERMINO='30/12/2025' #'30/09/2025'
 
 # Bolseiros
 
@@ -203,12 +204,15 @@ for sheet_name in sheet_names: #source_workbook.sheetnames:
         df['extracted_date'] = df[RH_data_termino].str.extract(r'(\d{4}-\d{2}-\d{2})', expand=False)
         # Convert extracted dates to datetime
         df['date'] = pd.to_datetime(df['extracted_date'], format='%Y-%m-%d', errors='coerce')
+        df[RH_data_limite] = df['date'].astype(str)
         # Create the boolean column
-        df['before_set_2025'] = df['date'] >= pd.to_datetime('30/09/2025', format='%d/%m/%Y')
+        df['before_set_2025'] = df['date'] >= pd.to_datetime(DATA_TERMINO, format='%d/%m/%Y')
         # Set True for empty 'data_termino' values
         df.loc[df[RH_data_termino].isnull() | df[RH_data_termino].isna() | (df[RH_data_termino] == '') | (df[RH_data_termino].astype(str)=='nan'), 'before_set_2025'] = True
+        df.loc[df[RH_data_termino].isnull() | df[RH_data_termino].isna() | (df[RH_data_termino] == '') | (df[RH_data_termino].astype(str)=='nan'), RH_data_limite] = ''
         df['before_set_2025'] = df['before_set_2025'].fillna(True)
-        print(df[[RH_data_termino,'extracted_date','date','before_set_2025']].head(20))
+        df[RH_data_limite] = df[RH_data_limite].fillna('')
+        print(df[[RH_data_termino,'extracted_date','date','before_set_2025',RH_data_limite]].head(20))
         potenciais_docentes=df[df['before_set_2025']][RH_nome]
         # Drop temporary columns
         df = df.drop(['extracted_date', 'date',RH_data_termino,'before_set_2025'], axis=1)
