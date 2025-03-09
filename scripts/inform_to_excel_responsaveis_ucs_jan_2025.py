@@ -206,16 +206,16 @@ for sheet_name in sheet_names: #source_workbook.sheetnames:
         df['date'] = pd.to_datetime(df['extracted_date'], format='%Y-%m-%d', errors='coerce')
         df[RH_data_limite] = df['date'].astype(str)
         # Create the boolean column
-        df['before_set_2025'] = df['date'] >= pd.to_datetime(DATA_TERMINO, format='%d/%m/%Y')
+        df['before_DATA_TERMINO'] = df['date'] >= pd.to_datetime(DATA_TERMINO, format='%d/%m/%Y')
         # Set True for empty 'data_termino' values
-        df.loc[df[RH_data_termino].isnull() | df[RH_data_termino].isna() | (df[RH_data_termino] == '') | (df[RH_data_termino].astype(str)=='nan'), 'before_set_2025'] = True
+        df.loc[df[RH_data_termino].isnull() | df[RH_data_termino].isna() | (df[RH_data_termino] == '') | (df[RH_data_termino].astype(str)=='nan'), 'before_DATA_TERMINO'] = True
         df.loc[df[RH_data_termino].isnull() | df[RH_data_termino].isna() | (df[RH_data_termino] == '') | (df[RH_data_termino].astype(str)=='nan'), RH_data_limite] = ''
-        df['before_set_2025'] = df['before_set_2025'].fillna(True)
+        df['before_DATA_TERMINO'] = df['before_DATA_TERMINO'].fillna(True)
         df[RH_data_limite] = df[RH_data_limite].fillna('')
-        print(df[[RH_data_termino,'extracted_date','date','before_set_2025',RH_data_limite]].head(20))
-        potenciais_docentes=df[df['before_set_2025']][RH_nome]
+        print(df[[RH_data_termino,'extracted_date','date','before_DATA_TERMINO',RH_data_limite]].head(20))
+        potenciais_docentes=df[df['before_DATA_TERMINO']][RH_nome]
         # Drop temporary columns
-        df = df.drop(['extracted_date', 'date',RH_data_termino,'before_set_2025'], axis=1)
+        df = df.drop(['extracted_date', 'date',RH_data_termino,'before_DATA_TERMINO'], axis=1)
         # end 
         
         # ordenar df segundo lista todos_docentes
