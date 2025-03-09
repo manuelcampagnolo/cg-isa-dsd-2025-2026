@@ -17,28 +17,16 @@ from openpyxl.utils import get_column_letter, column_index_from_string, coordina
 from openpyxl.styles import PatternFill, Border, Side, Alignment, Protection, Font, colors
 from pathlib import Path
 import pandas as pd
+import re
 from unidecode import unidecode
 from functions import simplify_strings, df_to_excel_with_columns, compact_excel_file, get_letter_from_column_name,unlock_cells,stripe_cells
 from functions import add_suffix_to_duplicates, reorder_and_filter_dataframe, insert_row_at_beginning, insert_row_at_end,sort_list
+import sys
 
 
 UNPROTECT_OUTPUT_CELLS=True # para desproteger células com função unlock_cells(ws, col_name, min_row=None, max_row=None):
 PROTECT_WORKSHEET=True # tem que ser True para impedir escrita
 PASSWORD='kathleen'
-
-# input DSD file
-FOLDER_SERVICOS= 'ficheiros_servicos_ISA' #'ficheiros_servicos_ISA'
-FOLDER_OUTPUT='output_files'
-FOLDER_FICH_RESPONSAVEIS_UCs='ficheiros_responsaveis_ucs'
-FORCE_OUTPUT_NAME=True # para forçar nome do output; caso contrário, é derivado do nome do ficheiro de input
-DSD_OUTPUT_FICH='DSD_2025_2026_responsaveis_UCs.xlsx' # if FORCE_OUTPUT_NAME
-#DSD_INPUT_FICH='DSD_inform_2024_2025_v5.xlsx'
-#DSD_INPUT_FICH='2024_01_26 DSD_inform_202324_v6-1-1.xlsx (Dados MCaron e Carlos).xlsx'
-DSD_INPUT_FICH='info_servicos_jan_2025.xlsx' #'2024_01_26 DSD_inform_202324_v6-1-1.xlsx (Dados MCaron e Carlos)_compact_ML3.xlsx'
-stem=Path(DSD_INPUT_FICH).stem
-suffix=Path(DSD_INPUT_FICH).suffix
-COMPACT='_compact'
-BLOQ='_bloq'
 
 # Load the source workbook
 #input_folder=Path(r'C:\Users\mlc\OneDrive - Universidade de Lisboa\Documents\profissional-isa-cv\cg-isa\DSD_2024_2025\backup_inputs_DSD')
@@ -47,49 +35,79 @@ try:
 except:
     working_dir=Path().absolute()
 
+ANO='2025-2026'
+# FICHEIROS E PASTAS
+FOLDER_ANO = 'DSD_2025_2026'
+DSD_INPUT_FICH_stem='info_servicos_jan_2025_v3' #'info_servicos_jan_2025.xlsx' #'2024_01_26 DSD_inform_202324_v6-1-1.xlsx (Dados MCaron e Carlos)_compact_ML3.xlsx'
+stem=DSD_OUTPUT_FICH_stem='DSD_2025_2026_coords_UCs' # 
+suffix=DSD_OUTPUT_FICH_suffix='.xlsx'
+FOLDER_SERVICOS= 'ficheiros_servicos_ISA' #'ficheiros_servicos_ISA'
+FOLDER_OUTPUT='output_files'
+# NOME FICHEIRO COMPACTO
+COMPACT='_compact'
+BLOQ='_bloq' # bloqueado com password
+# list files in FOLDER_OUTPUT and create name of output file v1, v2, v3,...
+folder_output=working_dir/FOLDER_ANO/FOLDER_OUTPUT
+number_files=len(list(folder_output.rglob(stem+"*")))
+DSD_OUTPUT_FICH_version=stem+'_v'+str(number_files+1)+suffix 
+DSD_OUTPUT_FICH_version_bloqued=stem+'_v'+str(number_files+1)+BLOQ+suffix 
 
-input_folder= working_dir / 'DSD_2025_2026' / FOLDER_SERVICOS
-output_folder= working_dir / 'DSD_2025_2026' / FOLDER_OUTPUT
-compact_input_file= output_folder  / (stem+COMPACT+suffix)
-if FORCE_OUTPUT_NAME: 
-    output_file=output_folder / DSD_OUTPUT_FICH
+# CAMINHOS
+input_folder= working_dir / FOLDER_ANO / FOLDER_SERVICOS
+output_folder= working_dir / FOLDER_ANO / FOLDER_OUTPUT
+input_file = input_folder/ (DSD_INPUT_FICH_stem+suffix)
+compact_file= output_folder  / (DSD_INPUT_FICH_stem+COMPACT+suffix) # intermediate output (small xlsx input file)
+if PROTECT_WORKSHEET: 
+    output_file=output_folder / DSD_OUTPUT_FICH_version
 else:
-    output_file=output_folder / (stem+BLOQ+suffix)
+    output_file=output_folder / DSD_OUTPUT_FICH_version_bloqued
 
 # worksheets and column names do ficheiro (único) dos serviços que já contém UCs e RHs para DSD 2024-2025
 # prefixo=são as folhas do excel dos serviços DSD_INPUT_FICH: UC, UCMETA, etc
 # sufixo _etc:= são as colunas que interessam da folha respetiva 
 UC ='listagem_UCs' #'uc_2024-25'
+N_extra_UCs=30 # para permitir introduzir novas UCs
 UC_codigo='codigo_uc'
 UC_uc = 'nome_uc_pt' # 'unidade_curricular'
-UC_resp='responsavel_unidade_curricular'
-UC_sugestoes='sugestões de modificação da info da UC'
-UC_autor_sugestao='autor da sugestão'
-UC_area_cientifica='acd_uc' #'area_cient' # drop
-#UC_numero_alunos='NumeroAlunos' # drop
-UC_ciclo_curso= 'ciclo_curso'
+#UC_area_cientifica='area_uc' #'area_cient' # drop
+UC_ciclo_curso= 'ciclo_uc' # "2º Ciclo (M)"" ou "1º Ciclo (L)" ou "3º Ciclo (D)"
 UC_ciclo_curso_curso='curso' # para filtrar cncg's
-UCMETA='uc_meta'
-RH='docentes_dez_2024'
-RH_nome='nome' # nomes docentes
-N_extra_nomes=0
-RH_numero = 'num_pessoal'
-RH_data_fim='data_fim'
-RH_posicao='posicao'
-RH_obs = 'Obs'
-RHPOSICAO='RH_posicao' # drop
-RHMETA='RH_meta'
-PE='planos_estudos' # drop
-AC='AC' #drop
-ACMETA='AC_meta'#drop
-POS='POS' #drop
-UCAREA='uc_AreaCient' # drop
+UC_tipo='tipo_externo'
+UC_ects='ects'
+UC_tipo_externo='externo' ## valor do atributo quando UC é externa: pode ser Normal, externa, 'Trabalho de projeto',...
+UC_dept='dept_uc' # DCEB, DRAT, EXTISA
+UC_dept_extisa='EXTISA' ## valor do atributo para filtar UC externas ao ISA
+UC_atrib_select=[UC_codigo,UC_uc,UC_ciclo_curso,UC_ects,UC_tipo]
+# novos atributos UC:
+UC_resp='coordenador_UC'
+UC_sugestoes='sugestões de modificação da info da UC'  # ver ACD 
+UC_autor_sugestao='autor da sugestão'
+#UC_numero_alunos='NumeroAlunos' # drop
+#UCMETA='uc_meta'
 
+# RH
+N_extra_nomes=20
+RH='docentes_mar_2025'#'docentes_dez_2024'
+RH_nome='nome_doc' # nomes docentes
+RH_numero = 'numero_doc'
+RH_data_termino='data_termino'
+RH_posicao='categ_doc'
+RH_grupo='grupo_doc' # investigadores, docentes, não docente, ...
+RH_dept_doc	= 'dept_doc' # CEF, DCEB, DRAT, CEABN
+RH_seccao_doc= 'seccao_doc'
+RH_contrato='contrato'
+RH_obs = 'contrato' # poderia ser outro: escolhe-se o mais relevante para o DSD_coords
+RN_contrato_convidado='Docente Convidado' # valor na colune 'contrato' 2025-2026
+RH_atrib_select=[RH_nome,RH_numero,RH_posicao,RH_grupo,RH_dept_doc,RH_seccao_doc, RH_obs,RH_data_termino]
 # values: Sheet_column_value
 RH_nome_pro_bono='docente_PRO_BONO' 
-RH_nome_em_contratacao='Docente em contratação'
-RH_data_fim_sem_termo='sem termo'
-DATA_TERMO_CERTO='2024-09-01'
+# RH_data_fim_sem_termo='sem termo'
+# DATA_TERMO_CERTO='2024-09-01'
+
+# Bolseiros
+
+############################### folhas do input a considerar
+sheet_names=[RH,UC]
 
 # desproteger células:
 # responsável
@@ -114,40 +132,41 @@ fill_yellow = PatternFill(start_color="FFFFE0", end_color="FFFFE0", fill_type="s
 fill_light_yellow = PatternFill(start_color="FFFFED", end_color="FFFFED", fill_type="solid") 
 thin_border=Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
 
-# # Load the source workbook
+##################################################################### Load the source workbook
 # source_workbook = load_workbook(input_file, read_only=True, data_only=True)
 # Try to read smaller file; otherwise read original file and create smaller file
 try:
     #source_workbook = load_workbook(compact_input_file)
-    sheet_names = pd.ExcelFile(compact_input_file).sheet_names
+    dummy = pd.ExcelFile(compact_file).sheet_names
 except:
     print('ler ficheiro original não compactado')
-    #source_workbook = load_workbook(input_folder  / DSD_INPUT_FICH)  # demora
-    compact_excel_file(input_folder  / DSD_INPUT_FICH, compact_input_file)
+    compact_excel_file(input_file, compact_file)
     print('ficheiro original compactado')
-    sheet_names = pd.ExcelFile(compact_input_file).sheet_names
+    existing_sheet_names = pd.ExcelFile(compact_file).sheet_names
+
+#sys.exit('compact criado')
 
 # Create a new workbook
 #new_workbook = pd.ExcelWriter(output_file, engine='openpyxl')
 new_workbook = Workbook()
 
 # contar número de docentes em RH
-df = pd.read_excel(compact_input_file, sheet_name=RH)
-idx_RH_nome,letter_RH_nome=get_letter_from_column_name(df,RH_nome)  #df.columns.get_loc(RH_nome) + 1
-idx_RH_posicao,letter_RH_posicao=get_letter_from_column_name(df,RH_posicao)  #df.columns.get_loc(RH_nome) + 1
-idx_RH_obs,letter_RH_obs=get_letter_from_column_name(df,RH_obs)  #df.columns.get_loc(RH_nome) + 1
+#df = pd.read_excel(compact_file, sheet_name=RH)
+#idx_RH_nome,letter_RH_nome=get_letter_from_column_name(df,RH_nome)  #df.columns.get_loc(RH_nome) + 1
+#idx_RH_posicao,letter_RH_posicao=get_letter_from_column_name(df,RH_posicao)  #df.columns.get_loc(RH_nome) + 1
+#idx_RH_obs,letter_RH_obs=get_letter_from_column_name(df,RH_obs)  #df.columns.get_loc(RH_nome) + 1
 # adicionar N_extra_nomes nomes em branco em RH_home
 # adicionar col
     
-# contar número de Ucs em UC_2024_2025
-df = pd.read_excel(compact_input_file, sheet_name=UC)
-numero_ucs=len(df[UC_uc])
-idx_UC_uc,letter_UC_uc=get_letter_from_column_name(df,UC_uc) 
+# contar número de Ucs
+#df = pd.read_excel(compact_file, sheet_name=UC)
+#numero_ucs=len(df[UC_uc])
+#idx_UC_uc,letter_UC_uc=get_letter_from_column_name(df,UC_uc) 
 #idx_uc=df.columns.get_loc(UC_uc) + 1
 
 # Iterate through sheets in the source workbook
 # Ensure that RH comes before UC and remove 'planos_estudos', etc
-sheet_names=[RH,RHMETA, UC,UCMETA]+list(set(sheet_names).difference(set([RH,RHMETA, UC,UCMETA,PE,AC,ACMETA,POS, RHPOSICAO, UCAREA])))
+#sheet_names=[RH,RHMETA, UC,UCMETA]+list(set(sheet_names).difference(set([RH,RHMETA, UC,UCMETA,PE,AC,ACMETA,POS, RHPOSICAO, UCAREA])))
 for sheet_name in sheet_names: #source_workbook.sheetnames:
     # for each sheet_name, we copy the contents of the input sheet, create a df, modify df, create validation, and write to workbook with df_to_excel_with_columns
     print(sheet_name) 
@@ -155,82 +174,137 @@ for sheet_name in sheet_names: #source_workbook.sheetnames:
     new_worksheet = new_workbook.create_sheet(title=sheet_name)
 
     # Read the sheet into a pandas DataFrame
-    df = pd.read_excel(compact_input_file, sheet_name=sheet_name)
-    # removes accents and replaces ' ' by '_'
+    df = pd.read_excel(compact_file, sheet_name=sheet_name)
+    # removes accents and replaces ' ' by '_', convert to lowercase
     df.columns=simplify_strings(df.columns)
 
     # ordenar docentes por ordem alfabética, com os novos docentes à cabeça, mais "docente_PRO_BONO"; excluir docentes a termo, com termo antes de set 2024
     # Nota: 'docentes em contratação' podem ter o mesmo nome e por isso é preciso lidar com duplicações
     if sheet_name==RH:
-        df=insert_row_at_beginning(df,{RH_nome: RH_nome_pro_bono, RH_data_fim: RH_data_fim_sem_termo, RH_obs: 'Docente ou especialista não do ISA que participa na docência sem receber pagamento do ISA: o nome do docente pode ser indicado na coluna de observações'})
+        df=df[RH_atrib_select]
+        # clean df
+        df=insert_row_at_beginning(df,{RH_nome: RH_nome_pro_bono,  RH_obs: 'Docente ou especialista não do ISA que participa na docência sem receber pagamento do ISA: o nome do docente pode ser indicado na coluna de observações'})
         df=add_suffix_to_duplicates(df,RH_nome)
-        docentes_em_contratacao=list(df[df[RH_nome].str.contains(RH_nome_em_contratacao, case=False, na=False)][RH_nome])
+        #docentes_em_contratacao=list(df[df[RH_nome].str.contains(RH_nome_em_contratacao, case=False, na=False)][RH_nome])
         # remover docentes com contrato que acaba até 1 de setembro de 2024
-        sem_termo=list(df[df[RH_data_fim].str.contains(RH_data_fim_sem_termo, case=False, na=False)][RH_nome])
-        com_termo=list(set(list(df[RH_nome])).difference(set(sem_termo)))
-        df_com_termo=df[df[RH_nome].isin(com_termo)]
-        df_set_2024=df_com_termo[pd.to_datetime(df_com_termo[RH_data_fim]) > DATA_TERMO_CERTO]
-        com_termo_set_2024=list(df_set_2024[RH_nome])
+        #sem_termo=list(df[df[RH_data_fim].str.contains(RH_data_fim_sem_termo, case=False, na=False)][RH_nome])
+        #com_termo=list(set(list(df[RH_nome])).difference(set(sem_termo)))
+        #df_com_termo=df[df[RH_nome].isin(com_termo)]
+        #df_set_2024=df_com_termo[pd.to_datetime(df_com_termo[RH_data_fim]) > DATA_TERMO_CERTO]
+        #com_termo_set_2024=list(df_set_2024[RH_nome])
         # criar lista em ordem alfabética de docentes que não estão em contratação
-        L=list(set(list(sem_termo+com_termo_set_2024)).difference(set(docentes_em_contratacao).union(set([RH_nome_pro_bono]))))
-        outros_docentes=sort_list(L, simplify_strings(L))
+        #L=list(set(list(sem_termo+com_termo_set_2024)).difference(set(docentes_em_contratacao).union(set([RH_nome_pro_bono]))))
+        #outros_docentes=sort_list(L, simplify_strings(L))
         # list de nomes de todos os potenciais docentes 
-        todos_docentes=[RH_nome_pro_bono]+docentes_em_contratacao+outros_docentes
-        # ordenar df segundo lista todos_docentes
-        df=reorder_and_filter_dataframe(df, RH_nome, todos_docentes)
-        # acrescentar novas linhas para eventuais docentes não listados
-        numero_docentes=len(df[RH_nome])
-        for i in range(N_extra_nomes):
-            df=insert_row_at_end(df,{RH_nome: 'a_designar_'+str(i+1), RH_posicao:'indicar se possível', RH_obs: 'Indicar nome de docente em falta e posição nas colunas respetivas. Aqui, indicar quem faz a porposta e justificar.' })
+        #todos_docentes=[RH_nome_pro_bono]+docentes_em_contratacao+outros_docentes
+        # verificar data de fim de contrato # anterior a 30/09/2025
+        # usar RH_data_termino:
+        df[RH_data_termino] = df[RH_data_termino].astype(str).str.replace('/', '-')
+        df['extracted_date'] = df[RH_data_termino].str.extract(r'(\d{4}-\d{2}-\d{2})', expand=False)
+        # Convert extracted dates to datetime
+        df['date'] = pd.to_datetime(df['extracted_date'], format='%Y-%m-%d', errors='coerce')
+        # Create the boolean column
+        df['before_set_2025'] = df['date'] >= pd.to_datetime('30/09/2025', format='%d/%m/%Y')
+        # Set True for empty 'data_termino' values
+        df.loc[df[RH_data_termino].isnull() | df[RH_data_termino].isna() | (df[RH_data_termino] == '') | (df[RH_data_termino].astype(str)=='nan'), 'before_set_2025'] = True
+        df['before_set_2025'] = df['before_set_2025'].fillna(True)
+        print(df[[RH_data_termino,'extracted_date','date','before_set_2025']].head(20))
+        potenciais_docentes=df[df['before_set_2025']][RH_nome]
+        # Drop temporary columns
+        df = df.drop(['extracted_date', 'date',RH_data_termino,'before_set_2025'], axis=1)
+        # end 
         
+        # ordenar df segundo lista todos_docentes
+        df=reorder_and_filter_dataframe(df, RH_nome, potenciais_docentes)
+        # quando df está na forma final contar número docentes
+        numero_docentes=df.shape[0]
+        print('numero docentes:',numero_docentes)
+        # colunas relevantes da tabela
+        if RH_nome in df.columns:
+            idx_RH_nome,letter_RH_nome=get_letter_from_column_name(df,RH_nome)  #df.columns.get_loc(RH_nome) + 1
+        if RH_posicao in df.columns:
+            idx_RH_posicao,letter_RH_posicao=get_letter_from_column_name(df,RH_posicao)  #df.columns.get_loc(RH_nome) + 1
+        if RH_obs in df.columns:
+            idx_RH_obs,letter_RH_obs=get_letter_from_column_name(df,RH_obs)  #df.columns.get_loc(RH_nome) + 1
+        print('nome', idx_RH_nome, letter_RH_nome)
+        print('posicao', idx_RH_posicao, letter_RH_posicao)
+        print('obs', idx_RH_obs, letter_RH_obs)
+        # acrescentar novas linhas em docentes para eventuais docentes não listados se N_extra_nomes>0
+        for i in range(N_extra_nomes):
+            df=insert_row_at_end(df,{RH_nome: 'Outro_docente_'+str(i+1), RH_posicao:'Categoria/Departamento', RH_obs: 'Justificação. Estas linhas devem ser preenchidas apenas pelos presidentes dos Dpts.' })
+    
     # Criar drop-down menu para inserir nome responsável da UC
     if sheet_name==UC:
+        df=df[UC_atrib_select]
+        idx_UC_uc,letter_UC_uc=get_letter_from_column_name(df,UC_uc) 
         # remover coluna área cientifica, etc
-        df=df.drop(columns=[UC_area_cientifica,UC_numero_alunos])
+        # df=df.drop(columns=[UC_area_cientifica,UC_numero_alunos])
         # re-ordenar UCs pelo nome, mas com cursos CNCG no fim
         df=add_suffix_to_duplicates(df,UC_uc)
-        cncg=list(df[df[UC_ciclo_curso].str.contains(UC_ciclo_curso_curso, case=False, na=False)][UC_uc])
-        cncg=sort_list(cncg, simplify_strings(cncg))
-        uc_ciclos=list(set(list(df[UC_uc])).difference(set(cncg)))
-        uc_ciclos=sort_list(uc_ciclos, simplify_strings(uc_ciclos))
-        df=reorder_and_filter_dataframe(df, UC_uc, uc_ciclos+cncg)
+        #cncg=list(df[df[UC_ciclo_curso].str.contains(UC_ciclo_curso_curso, case=False, na=False)][UC_uc])
+        #cncg=sort_list(cncg, simplify_strings(cncg))
+        #uc_ciclos=list(set(list(df[UC_uc])).difference(set(cncg)))
+        #uc_ciclos=sort_list(uc_ciclos, simplify_strings(uc_ciclos))
+        df=reorder_and_filter_dataframe(df, UC_uc, df[UC_uc]) # re-orders by UC_uc, uses all values (since 3rd arg is also UC_uc)
         # Criar coluna responsável
         if UC_resp not in df.columns: 
             df.insert(idx_UC_uc-1,UC_resp,'') # automatizar .A largura da coluna tem que ser grande para se verem os nomes
         idx_UC_resp,letter_UC_resp=get_letter_from_column_name(df,UC_resp)
-        # Criar coluna 'autor_sugestão'
-        if UC_sugestoes not in df.columns: 
-            df.insert(df.shape[1],UC_autor_sugestao,'') 
-        idx_UC_autor_sugestao,letter_UC_autor_sugestao=get_letter_from_column_name(df,UC_autor_sugestao) 
+        print(df, idx_UC_uc, UC_resp,idx_UC_resp,letter_UC_resp) # B
         # Criar coluna 'sugestões'
         if UC_sugestoes not in df.columns: 
             df.insert(df.shape[1],UC_sugestoes,'') 
         idx_UC_sugestoes,letter_UC_sugestoes=get_letter_from_column_name(df,UC_sugestoes) 
-        # validation responsáveis
-        dv = DataValidation(type="list", formula1=f"{quote_sheetname('RH')}!${letter_RH_nome}$2:${letter_RH_nome}${numero_docentes+1+N_extra_nomes}") # 10 extra
+        # Criar coluna 'autor_sugestão'
+        if UC_autor_sugestao not in df.columns: 
+            df.insert(df.shape[1],UC_autor_sugestao,'') 
+        idx_UC_autor_sugestao,letter_UC_autor_sugestao=get_letter_from_column_name(df,UC_autor_sugestao) 
+        # UC_ciclo_curso
+        idx_UC_ciclo_curso,letter_UC_ciclo_curso=get_letter_from_column_name(df,UC_ciclo_curso) 
+        idx_UC_uc,letter_UC_uc=get_letter_from_column_name(df,UC_uc) 
+        # quando df está na forma final contar número UCs
+        numero_ucs=df.shape[0]
+        print('numero UCs:',numero_ucs) 
+        # para drop-down, ante sde acrescentar novas linhas 
+        lista_ciclos=sorted(list(set(df[UC_ciclo_curso])))
+        # dar a possibilidade de adicionar outras UCs
+        for i in range(N_extra_UCs):
+            df=insert_row_at_end(df,{UC_uc: 'Nome_UC_em_falta_'+str(i+1), UC_ciclo_curso:'Indicar ciclo UC em falta', UC_sugestoes: 'Linha a preencher apenas pelos presidentes dos Dpts' })
+        # validation responsáveis - precisa de aceder a RH_nome
+        dv = DataValidation(type="list", formula1=f"{quote_sheetname(RH)}!${letter_RH_nome}$2:${letter_RH_nome}${numero_docentes+1+N_extra_nomes}") # 10 extra
         new_worksheet.add_data_validation(dv)
-        dv.add(f"${letter_UC_resp}$2:{letter_UC_resp}${numero_ucs+1}") # creates drop-down menu. #automatizar
+        dv.add(f"${letter_UC_resp}$2:{letter_UC_resp}${numero_ucs+N_extra_UCs+1}") # creates drop-down menu. #automatizar
         # validation autor_sugestao
-        dv.add(f"${letter_UC_autor_sugestao}$2:{letter_UC_autor_sugestao}${numero_ucs+1}") # creates drop-down menu.
+        dv.add(f"${letter_UC_autor_sugestao}$2:{letter_UC_autor_sugestao}${numero_ucs+N_extra_UCs+1}") # creates drop-down menu.
+        # validation ciclo nova UC
+        formula = '"{}"'.format(','.join(lista_ciclos))
+        dv = DataValidation(type="list", formula1=formula, allow_blank=False)
+        new_worksheet.add_data_validation(dv)
+        dv.add(f"${letter_UC_ciclo_curso}${numero_ucs+2}:{letter_UC_ciclo_curso}${numero_ucs+N_extra_UCs+1}") # creates drop-down menu.
+
 
     # Write the DataFrame to the new workbook
     #df.to_excel(new_workbook, sheet_name=sheet_name, index=False, startrow=0, header=True)
     df_to_excel_with_columns(df,new_worksheet,maxwidth=20,header=True,index=False,startrow=0, startcol=0)
 
-    # Apply filters to the first row
+    # Apply filters to the first row exceto se a sheet_name contém '_meta'
     if '_meta' not in sheet_name:
         new_worksheet.auto_filter.ref = new_worksheet.dimensions
         new_worksheet.freeze_panes = "A2"
     
     # a ideia é desbloquear algumas células e a seguir bloquear toda a worksheet
     # desbloquear células dos responsáveis e das sugestões das UC
+    # células que vão ficar a verde:
     if sheet_name==UC and UNPROTECT_OUTPUT_CELLS:
         stripe_cells(new_worksheet, fill_color=fill_light_yellow,border=thin_border)
         unlock_cells(new_worksheet,letter_UC_resp,fill_color=fill_green,border=thin_border)
         unlock_cells(new_worksheet,letter_UC_sugestoes,fill_color=fill_green,border=thin_border)
         unlock_cells(new_worksheet,letter_UC_autor_sugestao,fill_color=fill_green,border=thin_border)
+        unlock_cells(new_worksheet,letter_UC_ciclo_curso, min_row=numero_ucs+2, max_row=numero_ucs+N_extra_UCs+1, fill_color=fill_green,border=thin_border)
+        unlock_cells(new_worksheet,letter_UC_uc, min_row=numero_ucs+2, max_row=numero_ucs+N_extra_UCs+1, fill_color=fill_green,border=thin_border)
     
     # Dar possibilidade de criar novos docentes
+    # apenas se N_extra_nomes>0
     if sheet_name==RH and UNPROTECT_OUTPUT_CELLS:
         stripe_cells(new_worksheet, fill_color=fill_light_yellow,border=thin_border)
         # docentes extra (a poderem ser adicionados)
@@ -246,6 +320,9 @@ for sheet_name in sheet_names: #source_workbook.sheetnames:
 # eliminar a worksheet 'Sheet' que foi criada automaticamente
 if 'Sheet' in new_workbook.sheetnames:  # remove default sheet
     new_workbook.remove(new_workbook['Sheet'])
+
+# trocar ordem 
+new_workbook._sheets = [new_workbook._sheets[i] for i in [1,0]]
 
 # workbook protection
 new_workbook.security.workbookPassword = PASSWORD

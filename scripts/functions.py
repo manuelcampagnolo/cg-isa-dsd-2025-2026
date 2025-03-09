@@ -405,7 +405,7 @@ def insert_row_at_end(df, new_row_dict):
 
 def add_suffix_to_duplicates(df, column_name):
     """
-    Adds suffixes to duplicate values in the specified column of a DataFrame.
+    Adds suffixes only to subsequent duplicate values in the specified column of a DataFrame.
 
     Parameters:
     - df: pandas DataFrame
@@ -415,25 +415,25 @@ def add_suffix_to_duplicates(df, column_name):
     - df_updated: pandas DataFrame, the updated DataFrame
     """
 
+    # Create a copy of the DataFrame to avoid modifying the original
+    df_updated = df.copy()
+
     # Get a boolean mask for duplicated values in the specified column
-    mask = df.duplicated(subset=[column_name], keep=False)
+    mask = df_updated.duplicated(subset=[column_name], keep='first')
 
     # Create a dictionary to store the count of each duplicated value
     suffix_count = {}
 
-    # Iterate through the DataFrame and add suffixes to duplicates
-    for index, row in df.iterrows():
+    # Iterate through the DataFrame and add suffixes only to subsequent duplicates
+    for index, row in df_updated.loc[mask].iterrows():
         value = row[column_name]
-        if mask[index]:
-            # This value is a duplicate
-            count = suffix_count.get(value, 1)
-            suffix = f'_{count}'
-            suffix_count[value] = count + 1
-            df.at[index, column_name] = f'{value}{suffix}'
+        count = suffix_count.get(value, 1)
+        suffix = f'_{count}'
+        suffix_count[value] = count + 1
+        df_updated.at[index, column_name] = f'{value}{suffix}'
 
-    return df
-# Example usage:
-# updated_df = add_suffix_to_duplicates(your_dataframe, 'your_column_name')
+    return df_updated
+
 
 def reorder_and_filter_dataframe(df, column_name, value_list):
     """
@@ -550,7 +550,7 @@ def prints_dictionary_of_sheet_and_column_names(workbook, input_file, ws_names=N
 
 def simplify_strings(s):
     ''' removes accents and replaces spaces by _ ; requires unidecode; s is a list of strings'''
-    return list(map(lambda x: x.replace(' ','_'),list(map(unidecode, s))))
+    return list(map(lambda x: x.replace(' ','_').lower(),list(map(unidecode, s))))
 
 def df_to_excel(df, ws, header, index, startrow, startcol):
     """Write DataFrame df to openpyxl worksheet ws"""
