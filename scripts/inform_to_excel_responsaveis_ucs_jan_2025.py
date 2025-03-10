@@ -1,3 +1,5 @@
+# copyright Manuel Campagnolo 2025
+
 # input:
 # ficheiro dos serviços com info sobre RH, UCs etc e metadados
 # parâmetros: data final contrato, ...
@@ -103,7 +105,7 @@ RH_atrib_select=[RH_nome,RH_numero,RH_posicao,RH_grupo,RH_dept_doc,RH_seccao_doc
 RH_nome_pro_bono='docente_PRO_BONO' 
 RH_data_limite='data_limite'
 # RH_data_fim_sem_termo='sem termo'
-DATA_TERMINO='30/12/2025' #'30/09/2025'
+DATA_TERMINO='30/09/2025' #'30/09/2025'
 
 # Bolseiros
 
